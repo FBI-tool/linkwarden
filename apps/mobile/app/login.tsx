@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { View, Text, Dimensions, TouchableOpacity, Image } from "react-native";
@@ -65,7 +65,7 @@ export default function HomeScreen() {
               className="w-[120px] h-[120px] mx-auto"
             />
           </View>
-          <Text className="text-base-100 text-7xl font-bold ml-8">Login</Text>
+          <Text className="text-base-100 text-5xl font-bold ml-8">Login</Text>
           <View>
             <Text
               className="text-base-100 text-2xl mx-8 mt-3"
@@ -182,6 +182,14 @@ export default function HomeScreen() {
             >
               <Text className="text-white text-xl">Login</Text>
             </Button>
+            <TouchableOpacity
+              className="w-fit mx-auto"
+              onPress={() => router.replace("/register")}
+            >
+              <Text className="text-neutral text-center w-fit">
+                Don't have an account? Sign up
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               className="w-fit mx-auto"
               onPress={() => SheetManager.show("support-sheet")}

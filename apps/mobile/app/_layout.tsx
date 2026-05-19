@@ -145,6 +145,7 @@ const RootComponent = ({ isLoading }: { isLoading: boolean }) => {
                 }}
               />
               <Stack.Screen name="login" />
+              <Stack.Screen name="register" />
               <Stack.Screen name="index" />
               <Stack.Screen name="incoming" />
               <Stack.Screen name="+not-found" />

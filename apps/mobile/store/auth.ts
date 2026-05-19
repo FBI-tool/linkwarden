@@ -9,6 +9,16 @@ import { clearCache } from "@/lib/cache";
 import useDataStore from "@/store/data";
 import { useOfflineSyncStore } from "@/lib/offlineSync";
 
+const cloudInstance = "https://cloud.linkwarden.app";
+
+type SignUpForm = {
+  name: string;
+  username?: string;
+  email?: string;
+  password: string;
+  instance: string;
+};
+
 type AuthStore = {
   auth: MobileAuth;
   signIn: (
@@ -17,8 +27,45 @@ type AuthStore = {
     instance: string,
     token?: string
   ) => Promise<void>;
+  signUp: (form: SignUpForm) => Promise<boolean>;
+  requestVerificationEmail: (
+    email: string,
+    instance: string
+  ) => Promise<boolean>;
   signOut: () => Promise<void>;
   setAuth: () => Promise<void>;
+};
+
+const timeout = () =>
+  new Promise<Response>((_, reject) =>
+    setTimeout(() => reject(new Error("TIMEOUT")), 30000)
+  );
+
+const requestVerificationEmail = async (email: string, instance: string) => {
+  try {
+    const res = await Promise.race([
+      fetch(`${instance}/api/v1/auth/request-verification-email`, {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      timeout(),
+    ]);
+    const data = await res.json().catch(() => null);
+
+    if (res.ok) return true;
+
+    Alert.alert("Error", data?.response || "Could not send verification email");
+    return false;
+  } catch (err: any) {
+    Alert.alert(
+      err?.message === "TIMEOUT" ? "Request timed out" : "Network error",
+      err?.message === "TIMEOUT"
+        ? "Unable to reach the server in time. Please check your network configuration and try again."
+        : "Could not connect to the server. Please check your network configuration and try again."
+    );
+    return false;
+  }
 };
 
 const useAuthStore = create<AuthStore>((set) => ({
@@ -42,11 +89,46 @@ const useAuthStore = create<AuthStore>((set) => ({
     } else {
       set({
         auth: {
-          instance: instance || "https://cloud.linkwarden.app",
+          instance: instance || cloudInstance,
           session: null,
           status: "unauthenticated",
         },
       });
+    }
+  },
+  requestVerificationEmail,
+  signUp: async ({ name, username, email, password, instance }) => {
+    try {
+      const res = await Promise.race([
+        fetch(`${instance}/api/v1/users`, {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            username,
+            email,
+            password,
+            acceptPromotionalEmails: false,
+          }),
+          headers: { "Content-Type": "application/json" },
+        }),
+        timeout(),
+      ]);
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        return email ? await requestVerificationEmail(email, instance) : true;
+      }
+
+      Alert.alert("Error", data?.response || "Could not create account");
+      return false;
+    } catch (err: any) {
+      Alert.alert(
+        err?.message === "TIMEOUT" ? "Request timed out" : "Network error",
+        err?.message === "TIMEOUT"
+          ? "Unable to reach the server in time. Please check your network configuration and try again."
+          : "Could not connect to the server. Please check your network configuration and try again."
+      );
+      return false;
     }
   },
   signIn: async (username, password, instance, token) => {

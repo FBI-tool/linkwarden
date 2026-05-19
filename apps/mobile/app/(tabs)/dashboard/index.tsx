@@ -127,7 +127,7 @@ export default function DashboardScreen() {
       contentInsetAdjustmentBehavior="automatic"
     >
       {orderedSections.map((sectionData, i) => {
-        if (!collections || !collections[0]) return null;
+        if (!collections) return null;
 
         const collection = collections.find(
           (c) => c.id === sectionData.collectionId

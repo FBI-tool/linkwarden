@@ -71,8 +71,8 @@ export const UpdateUserSchema = () => {
       .trim()
       .toLowerCase()
       .min(3)
-      .max(30)
-      .regex(/^[a-z0-9_-]{3,30}$/),
+      .max(50)
+      .regex(/^[a-z0-9_-]{3,50}$/),
     image: z.string().nullish(),
     password: z.string().min(8).max(2048).optional(),
     newPassword: z.string().min(8).max(2048).optional(),

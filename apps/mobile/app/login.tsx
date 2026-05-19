@@ -6,7 +6,6 @@ import { Redirect, router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import { View, Text, Dimensions, TouchableOpacity, Image } from "react-native";
-import { SheetManager } from "react-native-actions-sheet";
 import Svg, { Path } from "react-native-svg";
 import {
   KeyboardStickyView,
@@ -189,12 +188,6 @@ export default function HomeScreen() {
               <Text className="text-neutral text-center w-fit">
                 Don't have an account? Sign up
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="w-fit mx-auto"
-              onPress={() => SheetManager.show("support-sheet")}
-            >
-              <Text className="text-neutral text-center w-fit">Need help?</Text>
             </TouchableOpacity>
           </SafeAreaView>
         </View>

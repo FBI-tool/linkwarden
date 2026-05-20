@@ -1,6 +1,10 @@
 import { createSign } from "crypto";
 import { readFileSync } from "fs";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import * as process from "process";
+
+const appleIssuer = "https://appleid.apple.com";
+const appleJwks = createRemoteJWKSet(new URL(`${appleIssuer}/auth/keys`));
 
 const appleClientSecretMaxAge = 60 * 60 * 24 * 30; // 30 days
 const appleClientSecretRenewBuffer = 60 * 60; // 1 hour
@@ -71,6 +75,25 @@ function createAppleClientSecret() {
   return {
     value: `${unsignedToken}.${base64UrlEncode(signature)}`,
     expiresAt,
+  };
+}
+
+export async function verifyAppleIdentityToken(
+  identityToken: string,
+  audience: string
+) {
+  const { payload } = await jwtVerify(identityToken, appleJwks, {
+    issuer: appleIssuer,
+    audience,
+  });
+
+  if (!payload.sub) throw Error("Apple identity token is missing the subject.");
+
+  return payload as {
+    sub: string;
+    email?: string;
+    email_verified?: boolean | string;
+    is_private_email?: boolean | string;
   };
 }
 

@@ -6,6 +6,7 @@ import {
   isAtLeastInstanceVersion,
   type Config,
 } from "@linkwarden/router/config";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Redirect, router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
@@ -14,6 +15,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -46,13 +48,18 @@ const timeout = () =>
   );
 
 export default function RegisterScreen() {
-  const { auth, signUp, requestVerificationEmail } = useAuthStore();
+  const { auth, signUp, signInWithApple, requestVerificationEmail } =
+    useAuthStore();
   const { colorScheme } = useColorScheme();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfigLoading, setIsConfigLoading] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [configInstance, setConfigInstance] = useState("");
   const [configError, setConfigError] = useState("");
+  const [appleEnabled, setAppleEnabled] = useState(
+    Platform.OS === "ios" && (auth.instance || cloudInstance) === cloudInstance
+  );
+  const [isCheckingApple, setIsCheckingApple] = useState(false);
   const [sentTo, setSentTo] = useState<{
     email: string;
     instance: string;
@@ -79,7 +86,7 @@ export default function RegisterScreen() {
   const emailSignUp = currentConfig?.EMAIL_PROVIDER === true;
   const supportsMobileSignup =
     instance === cloudInstance ||
-    isAtLeastInstanceVersion(currentConfig?.INSTANCE_VERSION, "v2.14.3");
+    isAtLeastInstanceVersion(currentConfig?.INSTANCE_VERSION, "v2.15.0");
   const instanceName =
     instance === cloudInstance ? "cloud.linkwarden.app" : instance;
 
@@ -154,6 +161,48 @@ export default function RegisterScreen() {
         if (active) setConfigError("Could not reach this instance.");
       } finally {
         if (active) setIsConfigLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [instance]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios" || !instance) {
+      setAppleEnabled(false);
+      return;
+    }
+
+    setAppleEnabled(instance === cloudInstance);
+    setIsCheckingApple(true);
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const [configRes, loginsRes] = await Promise.all([
+          fetch(`${instance}/api/v1/config`),
+          fetch(`${instance}/api/v1/logins`),
+        ]);
+
+        if (!active || !configRes.ok || !loginsRes.ok) return;
+
+        const config = ((await configRes.json())?.response ?? null) as Config | null;
+        const logins = await loginsRes.json().catch(() => null);
+        const hasApple =
+          logins?.buttonAuths?.some(
+            (b: { method?: string }) => b.method === "apple"
+          ) === true;
+
+        if (active)
+          setAppleEnabled(
+            hasApple &&
+              isAtLeastInstanceVersion(config?.INSTANCE_VERSION, "v2.15.0")
+          );
+      } catch {
+      } finally {
+        if (active) setIsCheckingApple(false);
       }
     }, 400);
 
@@ -388,6 +437,26 @@ export default function RegisterScreen() {
                 >
                   <Text className="text-white text-xl">Sign Up</Text>
                 </Button>
+                {appleEnabled && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={
+                      AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                    }
+                    buttonStyle={
+                      colorScheme === "dark"
+                        ? AppleAuthentication.AppleAuthenticationButtonStyle
+                            .WHITE
+                        : AppleAuthentication.AppleAuthenticationButtonStyle
+                            .BLACK
+                    }
+                    cornerRadius={8}
+                    style={{ width: "100%", height: 48 }}
+                    onPress={() => {
+                      if (isCheckingApple) return;
+                      signInWithApple(instance);
+                    }}
+                  />
+                )}
                 <TouchableOpacity
                   className="w-fit mx-auto"
                   onPress={() => router.replace("/login")}

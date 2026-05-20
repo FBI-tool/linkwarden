@@ -2,10 +2,22 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
+import {
+  isAtLeastInstanceVersion,
+  type Config,
+} from "@linkwarden/router/config";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Redirect, router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
-import { View, Text, Dimensions, TouchableOpacity, Image } from "react-native";
+import {
+  Dimensions,
+  Image,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Svg, { Path } from "react-native-svg";
 import {
   KeyboardStickyView,
@@ -13,32 +25,40 @@ import {
 } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const cloudInstance = "https://cloud.linkwarden.app";
+
 export default function HomeScreen() {
-  const { auth, signIn } = useAuthStore();
+  const { auth, signIn, signInWithApple } = useAuthStore();
   const { colorScheme } = useColorScheme();
   const [method, setMethod] = useState<"password" | "token">("password");
   const [isLoading, setIsLoading] = useState(false);
+  const [appleEnabled, setAppleEnabled] = useState(
+    Platform.OS === "ios" && (auth.instance || cloudInstance) === cloudInstance
+  );
+  const [isCheckingApple, setIsCheckingApple] = useState(false);
 
   const [form, setForm] = useState({
     user: "",
     password: "",
     token: "",
-    instance: auth.instance || "https://cloud.linkwarden.app",
+    instance: auth.instance || cloudInstance,
   });
 
   const [showInstanceField, setShowInstanceField] = useState(
-    form.instance !== "https://cloud.linkwarden.app"
+    form.instance !== cloudInstance
   );
+
+  const instance = form.instance.trim().replace(/\/+$/, "");
 
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      instance: auth.instance || "https://cloud.linkwarden.app",
+      instance: auth.instance || cloudInstance,
     }));
   }, [auth.instance]);
 
   useEffect(() => {
-    setShowInstanceField(form.instance !== "https://cloud.linkwarden.app");
+    setShowInstanceField(form.instance !== cloudInstance);
   }, [form.instance]);
 
   useEffect(() => {
@@ -49,6 +69,49 @@ export default function HomeScreen() {
       password: "",
     }));
   }, [method]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios" || !instance) {
+      setAppleEnabled(false);
+      return;
+    }
+
+    setAppleEnabled(instance === cloudInstance);
+    setIsCheckingApple(true);
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const [configRes, loginsRes] = await Promise.all([
+          fetch(`${instance}/api/v1/config`),
+          fetch(`${instance}/api/v1/logins`),
+        ]);
+
+        if (!active || !configRes.ok || !loginsRes.ok) return;
+
+        const config = ((await configRes.json())?.response ??
+          null) as Config | null;
+        const logins = await loginsRes.json().catch(() => null);
+        const hasApple =
+          logins?.buttonAuths?.some(
+            (b: { method?: string }) => b.method === "apple"
+          ) === true;
+
+        if (active)
+          setAppleEnabled(
+            hasApple &&
+              isAtLeastInstanceVersion(config?.INSTANCE_VERSION, "v2.15.0")
+          );
+      } catch {
+      } finally {
+        if (active) setIsCheckingApple(false);
+      }
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [instance]);
 
   if (auth.status === "authenticated") {
     return <Redirect href="/dashboard" />;
@@ -181,6 +244,24 @@ export default function HomeScreen() {
             >
               <Text className="text-white text-xl">Login</Text>
             </Button>
+            {appleEnabled && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={
+                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                }
+                buttonStyle={
+                  colorScheme === "dark"
+                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={8}
+                style={{ width: "100%", height: 48 }}
+                onPress={() => {
+                  if (isCheckingApple) return;
+                  signInWithApple(instance);
+                }}
+              />
+            )}
             <TouchableOpacity
               className="w-fit mx-auto"
               onPress={() => router.replace("/register")}

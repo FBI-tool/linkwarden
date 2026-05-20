@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { router } from "expo-router";
 import { MobileAuth } from "@linkwarden/types/global";
 import { Alert } from "react-native";
@@ -27,6 +28,7 @@ type AuthStore = {
     instance: string,
     token?: string
   ) => Promise<void>;
+  signInWithApple: (instance: string) => Promise<void>;
   signUp: (form: SignUpForm) => Promise<boolean>;
   requestVerificationEmail: (
     email: string,
@@ -214,6 +216,66 @@ const useAuthStore = create<AuthStore>((set) => ({
           );
         }
       }
+    }
+  },
+  signInWithApple: async (instance) => {
+    let credential: AppleAuthentication.AppleAuthenticationCredential;
+    try {
+      credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+    } catch (err: any) {
+      if (err?.code === "ERR_REQUEST_CANCELED") return;
+      Alert.alert("Error", "Could not sign in with Apple.");
+      return;
+    }
+
+    if (!credential.identityToken) {
+      Alert.alert("Error", "Apple did not return an identity token.");
+      return;
+    }
+
+    const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    try {
+      const res = await Promise.race([
+        fetch(`${instance}/api/v1/auth/mobile/apple`, {
+          method: "POST",
+          body: JSON.stringify({
+            identityToken: credential.identityToken,
+            name: name || undefined,
+          }),
+          headers: { "Content-Type": "application/json" },
+        }),
+        timeout(),
+      ]);
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) {
+        const session = data.response.token;
+        await SecureStore.setItemAsync("TOKEN", session);
+        await SecureStore.setItemAsync("INSTANCE", instance);
+        set({ auth: { session, instance, status: "authenticated" } });
+        router.replace("/(tabs)/dashboard");
+      } else {
+        Alert.alert(
+          "Error",
+          data?.response || "Could not sign in with Apple."
+        );
+      }
+    } catch (err: any) {
+      Alert.alert(
+        err?.message === "TIMEOUT" ? "Request timed out" : "Network error",
+        err?.message === "TIMEOUT"
+          ? "Unable to reach the server in time. Please check your network configuration and try again."
+          : "Could not connect to the server. Please check your network configuration and try again."
+      );
     }
   },
   signOut: async () => {

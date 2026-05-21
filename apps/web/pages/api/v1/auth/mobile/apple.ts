@@ -30,7 +30,9 @@ export default async function appleMobileAuth(
     return res.status(401).json({ response: "Invalid Apple identity token." });
   }
 
-  const email = claims.email?.toLowerCase();
+  const emailVerified =
+    claims.email_verified === true || claims.email_verified === "true";
+  const email = emailVerified ? claims.email?.toLowerCase() : undefined;
 
   let account = await prisma.account.findFirst({
     where: { provider: "apple", providerAccountId: claims.sub },
@@ -40,9 +42,19 @@ export default async function appleMobileAuth(
   let user = account?.user;
 
   if (!user && email) {
-    user = (await prisma.user.findUnique({ where: { email } })) ?? undefined;
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: { accounts: true },
+    });
 
-    if (user)
+    if (existingUser && existingUser.accounts.length > 0)
+      return res.status(409).json({
+        response:
+          "An account with this email is already linked to another sign-in method.",
+      });
+
+    if (existingUser) {
+      user = existingUser;
       await prisma.account.create({
         data: {
           userId: user.id,
@@ -51,6 +63,7 @@ export default async function appleMobileAuth(
           providerAccountId: claims.sub,
         },
       });
+    }
   }
 
   if (!user) {

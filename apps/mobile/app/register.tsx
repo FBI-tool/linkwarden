@@ -7,6 +7,7 @@ import {
   type Config,
 } from "@linkwarden/router/config";
 import * as AppleAuthentication from "expo-apple-authentication";
+import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
 import { Redirect, router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
@@ -48,8 +49,13 @@ const timeout = () =>
   );
 
 export default function RegisterScreen() {
-  const { auth, signUp, signInWithApple, requestVerificationEmail } =
-    useAuthStore();
+  const {
+    auth,
+    signUp,
+    signInWithApple,
+    signInWithGoogle,
+    requestVerificationEmail,
+  } = useAuthStore();
   const { colorScheme } = useColorScheme();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfigLoading, setIsConfigLoading] = useState(false);
@@ -59,7 +65,10 @@ export default function RegisterScreen() {
   const [appleEnabled, setAppleEnabled] = useState(
     Platform.OS === "ios" && (auth.instance || cloudInstance) === cloudInstance
   );
-  const [isCheckingApple, setIsCheckingApple] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(
+    (auth.instance || cloudInstance) === cloudInstance
+  );
+  const [isCheckingOAuth, setIsCheckingOAuth] = useState(false);
   const [sentTo, setSentTo] = useState<{
     email: string;
     instance: string;
@@ -171,13 +180,15 @@ export default function RegisterScreen() {
   }, [instance]);
 
   useEffect(() => {
-    if (Platform.OS !== "ios" || !instance) {
+    if (!instance) {
       setAppleEnabled(false);
+      setGoogleEnabled(false);
       return;
     }
 
-    setAppleEnabled(instance === cloudInstance);
-    setIsCheckingApple(true);
+    setAppleEnabled(Platform.OS === "ios" && instance === cloudInstance);
+    setGoogleEnabled(instance === cloudInstance);
+    setIsCheckingOAuth(true);
     let active = true;
     const timer = setTimeout(async () => {
       try {
@@ -190,19 +201,26 @@ export default function RegisterScreen() {
 
         const config = ((await configRes.json())?.response ?? null) as Config | null;
         const logins = await loginsRes.json().catch(() => null);
+        const versionOk = isAtLeastInstanceVersion(
+          config?.INSTANCE_VERSION,
+          "v2.15.0"
+        );
         const hasApple =
           logins?.buttonAuths?.some(
             (b: { method?: string }) => b.method === "apple"
           ) === true;
+        const hasGoogle =
+          logins?.buttonAuths?.some(
+            (b: { method?: string }) => b.method === "google"
+          ) === true;
 
-        if (active)
-          setAppleEnabled(
-            hasApple &&
-              isAtLeastInstanceVersion(config?.INSTANCE_VERSION, "v2.15.0")
-          );
+        if (active) {
+          setAppleEnabled(Platform.OS === "ios" && hasApple && versionOk);
+          setGoogleEnabled(hasGoogle && versionOk);
+        }
       } catch {
       } finally {
-        if (active) setIsCheckingApple(false);
+        if (active) setIsCheckingOAuth(false);
       }
     }, 400);
 
@@ -452,8 +470,23 @@ export default function RegisterScreen() {
                     cornerRadius={8}
                     style={{ width: "100%", height: 48 }}
                     onPress={() => {
-                      if (isCheckingApple) return;
+                      if (isCheckingOAuth) return;
                       signInWithApple(instance);
+                    }}
+                  />
+                )}
+                {googleEnabled && (
+                  <GoogleSigninButton
+                    size={GoogleSigninButton.Size.Wide}
+                    color={
+                      colorScheme === "dark"
+                        ? GoogleSigninButton.Color.Light
+                        : GoogleSigninButton.Color.Dark
+                    }
+                    style={{ width: "100%", height: 48 }}
+                    onPress={() => {
+                      if (isCheckingOAuth) return;
+                      signInWithGoogle(instance);
                     }}
                   />
                 )}

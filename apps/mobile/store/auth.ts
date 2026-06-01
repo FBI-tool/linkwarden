@@ -6,13 +6,15 @@ import {
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
-import { MobileAuth } from "@linkwarden/types/global";
+import type { GetUserByIdResponse, MobileAuth } from "@linkwarden/types/global";
+import type { Config } from "@linkwarden/router/config";
 import { Alert } from "react-native";
 import { queryClient } from "@/lib/queryClient";
 import { mmkvPersister } from "@/lib/queryPersister";
 import { clearCache } from "@/lib/cache";
 import useDataStore from "@/store/data";
 import { useOfflineSyncStore } from "@/lib/offlineSync";
+import { hasInactiveSubscription } from "@/lib/subscription";
 
 const cloudInstance = "https://cloud.linkwarden.app";
 const googleWebClientId =
@@ -58,6 +60,35 @@ const timeout = () =>
   new Promise<Response>((_, reject) =>
     setTimeout(() => reject(new Error("TIMEOUT")), 30000)
   );
+
+const getPostAuthRoute = async (instance: string, session: string) => {
+  try {
+    const headers = { Authorization: `Bearer ${session}` };
+    const [configRes, userRes] = await Promise.all([
+      Promise.race([
+        fetch(`${instance}/api/v1/config`, { headers }),
+        timeout(),
+      ]),
+      Promise.race([
+        fetch(`${instance}/api/v1/users/me`, { headers }),
+        timeout(),
+      ]),
+    ]);
+
+    if (!configRes.ok || !userRes.ok) return "/(tabs)/dashboard";
+
+    const config = ((await configRes.json())?.response ??
+      null) as Config | null;
+    const user = ((await userRes.json())?.response ??
+      null) as GetUserByIdResponse | null;
+
+    return hasInactiveSubscription(user, config)
+      ? "/subscribe"
+      : "/(tabs)/dashboard";
+  } catch {
+    return "/(tabs)/dashboard";
+  }
+};
 
 const requestVerificationEmail = async (email: string, instance: string) => {
   try {
@@ -169,6 +200,8 @@ const useAuthStore = create<AuthStore>((set) => ({
         ]);
 
         if (res.ok) {
+          const route = await getPostAuthRoute(instance, token);
+
           await SecureStore.setItemAsync("INSTANCE", instance);
           await SecureStore.setItemAsync("TOKEN", token);
           set({
@@ -178,7 +211,7 @@ const useAuthStore = create<AuthStore>((set) => ({
               status: "authenticated",
             },
           });
-          router.replace("/(tabs)/dashboard");
+          router.replace(route);
         } else {
           Alert.alert("Error", "Invalid token");
         }
@@ -211,11 +244,12 @@ const useAuthStore = create<AuthStore>((set) => ({
         if (res.ok) {
           const data = await res.json();
           const session = (data as any).response.token;
+          const route = await getPostAuthRoute(instance, session);
 
           await SecureStore.setItemAsync("TOKEN", session);
           await SecureStore.setItemAsync("INSTANCE", instance);
           set({ auth: { session, instance, status: "authenticated" } });
-          router.replace("/(tabs)/dashboard");
+          router.replace(route);
         } else {
           Alert.alert("Error", "Invalid credentials");
         }
@@ -278,10 +312,12 @@ const useAuthStore = create<AuthStore>((set) => ({
 
       if (res.ok) {
         const session = data.response.token;
+        const route = await getPostAuthRoute(instance, session);
+
         await SecureStore.setItemAsync("TOKEN", session);
         await SecureStore.setItemAsync("INSTANCE", instance);
         set({ auth: { session, instance, status: "authenticated" } });
-        router.replace("/(tabs)/dashboard");
+        router.replace(route);
       } else {
         Alert.alert("Error", data?.response || "Could not sign in with Apple.");
       }
@@ -343,10 +379,12 @@ const useAuthStore = create<AuthStore>((set) => ({
 
       if (res.ok) {
         const session = data.response.token;
+        const route = await getPostAuthRoute(instance, session);
+
         await SecureStore.setItemAsync("TOKEN", session);
         await SecureStore.setItemAsync("INSTANCE", instance);
         set({ auth: { session, instance, status: "authenticated" } });
-        router.replace("/(tabs)/dashboard");
+        router.replace(route);
       } else {
         Alert.alert(
           "Error",

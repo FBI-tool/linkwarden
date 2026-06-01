@@ -28,6 +28,9 @@ const useDashboardData = (auth?: MobileAuth) => {
       );
       const data = await response.json();
 
+      if (!response.ok)
+        throw new Error(data?.response || "Failed to fetch dashboard data.");
+
       return data.data;
     },
     enabled: status === "authenticated",

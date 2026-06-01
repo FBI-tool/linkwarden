@@ -10,6 +10,9 @@ export type Config = {
   USER_CONTENT_DOMAIN: string | null;
   AI_ENABLED: boolean | null;
   INSTANCE_VERSION: string | null;
+  STRIPE_ENABLED: boolean | null;
+  TRIAL_PERIOD_DAYS: number | null;
+  REQUIRE_CC: boolean | null;
 };
 
 const normalizeVersion = (version?: string | null) => {

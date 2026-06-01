@@ -26,5 +26,12 @@ export const getEnvData = () => {
     USER_CONTENT_DOMAIN: process.env.NEXT_PUBLIC_USER_CONTENT_DOMAIN || null,
     AI_ENABLED: hasAiProvider || null,
     INSTANCE_VERSION: process.env.version,
+    STRIPE_ENABLED:
+      process.env.NEXT_PUBLIC_STRIPE === "true" ||
+      Boolean(process.env.STRIPE_SECRET_KEY) ||
+      null,
+    TRIAL_PERIOD_DAYS:
+      Number(process.env.NEXT_PUBLIC_TRIAL_PERIOD_DAYS) || null,
+    REQUIRE_CC: process.env.NEXT_PUBLIC_REQUIRE_CC === "true" || null,
   };
 };

@@ -8,7 +8,7 @@ import {
 } from "@linkwarden/router/config";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -39,6 +39,9 @@ const cloudConfig: Config = {
   USER_CONTENT_DOMAIN: null,
   AI_ENABLED: null,
   INSTANCE_VERSION: null,
+  STRIPE_ENABLED: null,
+  TRIAL_PERIOD_DAYS: null,
+  REQUIRE_CC: null,
 };
 
 const cleanInstance = (instance: string) => instance.trim().replace(/\/+$/, "");
@@ -199,7 +202,8 @@ export default function RegisterScreen() {
 
         if (!active || !configRes.ok || !loginsRes.ok) return;
 
-        const config = ((await configRes.json())?.response ?? null) as Config | null;
+        const config = ((await configRes.json())?.response ??
+          null) as Config | null;
         const logins = await loginsRes.json().catch(() => null);
         const versionOk = isAtLeastInstanceVersion(
           config?.INSTANCE_VERSION,
@@ -230,9 +234,7 @@ export default function RegisterScreen() {
     };
   }, [instance]);
 
-  if (auth.status === "authenticated") {
-    return <Redirect href="/dashboard" />;
-  }
+  if (auth.status === "authenticated") return null;
 
   const register = async () => {
     const email = form.email.toLowerCase().trim();

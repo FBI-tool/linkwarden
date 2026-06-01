@@ -1,13 +1,40 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Platform } from "react-native";
+import { Tabs, useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { useColorScheme } from "nativewind";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import { Folder, Hash, House, Link, Settings } from "lucide-react-native";
+import useAuthStore from "@/store/auth";
+import { useUser } from "@linkwarden/router/user";
+import { useConfig } from "@linkwarden/router/config";
+import { shouldRouteToSubscribe } from "@/lib/subscription";
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
+  const router = useRouter();
+  const { auth } = useAuthStore();
+  const { data: user, isLoading: isUserLoading } = useUser(auth);
+  const config = useConfig(auth);
+  const routeToSubscribe = shouldRouteToSubscribe(user, config.data);
+
+  useEffect(() => {
+    if (routeToSubscribe) router.replace("/subscribe");
+  }, [routeToSubscribe, router]);
+
+  if (
+    auth.status === "authenticated" &&
+    (isUserLoading || config.isLoading || routeToSubscribe)
+  ) {
+    return (
+      <View className="flex-1 items-center justify-center bg-base-100">
+        <ActivityIndicator
+          size="large"
+          color={rawTheme[colorScheme as ThemeName]["base-content"]}
+        />
+      </View>
+    );
+  }
 
   return (
     <Tabs

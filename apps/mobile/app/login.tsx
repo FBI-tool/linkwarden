@@ -8,7 +8,7 @@ import {
 } from "@linkwarden/router/config";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -126,9 +126,7 @@ export default function HomeScreen() {
     };
   }, [instance]);
 
-  if (auth.status === "authenticated") {
-    return <Redirect href="/dashboard" />;
-  }
+  if (auth.status === "authenticated") return null;
 
   return (
     <>

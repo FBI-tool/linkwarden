@@ -1,3 +1,5 @@
+// Will be deprecated soon! Moved to /api/v1/webhooks/stripe
+
 import type { NextApiRequest, NextApiResponse } from "next";
 import handleSubscription from "@/lib/api/stripe/handleSubscription";
 import stripeSDK from "@/lib/api/stripe/stripeSDK";

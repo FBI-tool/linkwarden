@@ -219,17 +219,18 @@ model Tag {
 }
 
 model Subscription {
-  id                          Int       @id @default(autoincrement())
-  active                      Boolean
-  stripeSubscriptionId        String    @unique
-  currentPeriodStart          DateTime
-  currentPeriodEnd            DateTime
-  quantity                    Int       @default(1)
-  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                      Int       @unique
-  childUsers                  User[]    @relation("ChildUsers")
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @default(now()) @updatedAt
+  id                              Int      @id @default(autoincrement())
+  active                          Boolean
+  stripeSubscriptionId            String?  @unique
+  revenueCatOriginalTransactionId String?  @unique
+  currentPeriodStart              DateTime
+  currentPeriodEnd                DateTime
+  quantity                        Int      @default(1)
+  user                            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                          Int      @unique
+  childUsers                      User[]   @relation("ChildUsers")
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @default(now()) @updatedAt
 }
 
 model AccessToken {

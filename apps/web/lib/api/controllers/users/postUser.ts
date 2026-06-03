@@ -26,6 +26,17 @@ export default async function postUser(
     return { response: "Registration is disabled.", status: 400 };
   }
 
+  if (
+    !parentUser?.subscriptions?.stripeSubscriptionId ||
+    parentUser.subscriptions.revenueCatOriginalTransactionId
+  ) {
+    return {
+      response:
+        "Adding seats is only supported if you subscribed on web using Stripe.",
+      status: 400,
+    };
+  }
+
   const dataValidation = PostUserSchema().safeParse(req.body);
 
   if (!dataValidation.success) {

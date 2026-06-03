@@ -90,7 +90,7 @@ export default async function deleteUserById(
           },
         });
 
-        if (removeUser.emailVerified)
+        if (removeUser.emailVerified && user.subscriptions.stripeSubscriptionId)
           await updateSeats(
             user.subscriptions.stripeSubscriptionId,
             user.subscriptions.quantity - 1
@@ -159,7 +159,7 @@ export default async function deleteUserById(
                 select: { stripeSubscriptionId: true },
               });
 
-              if (subscription) {
+              if (subscription?.stripeSubscriptionId) {
                 await stripe.subscriptions.cancel(
                   subscription.stripeSubscriptionId,
                   {
@@ -170,7 +170,11 @@ export default async function deleteUserById(
                   }
                 );
               }
-            } else if (user.subscriptions?.id && queryId === userId) {
+            } else if (
+              user.subscriptions?.id &&
+              user.subscriptions.stripeSubscriptionId &&
+              queryId === userId
+            ) {
               await stripe.subscriptions.cancel(
                 user.subscriptions.stripeSubscriptionId,
                 {
@@ -182,6 +186,7 @@ export default async function deleteUserById(
               );
             } else if (
               user.parentSubscription?.id &&
+              user.parentSubscription.stripeSubscriptionId &&
               user &&
               user.emailVerified
             ) {

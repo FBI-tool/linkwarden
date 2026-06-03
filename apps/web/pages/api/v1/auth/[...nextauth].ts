@@ -1367,6 +1367,7 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             if (
               STRIPE_SECRET_KEY &&
               parentSubscription?.quantity &&
+              parentSubscription.stripeSubscriptionId &&
               verifiedChildUsersCount + 2 > // add current user and the admin
                 parentSubscription.quantity
             ) {

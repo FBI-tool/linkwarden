@@ -90,7 +90,11 @@ export default async function deleteUserById(
           },
         });
 
-        if (removeUser.emailVerified && user.subscriptions.stripeSubscriptionId)
+        if (
+          removeUser.emailVerified &&
+          user.subscriptions.provider === "STRIPE" &&
+          user.subscriptions.stripeSubscriptionId
+        )
           await updateSeats(
             user.subscriptions.stripeSubscriptionId,
             user.subscriptions.quantity - 1
@@ -132,7 +136,10 @@ export default async function deleteUserById(
 
         await removeFile({ filePath: `uploads/avatar/${queryId}.jpg` });
 
-        if (process.env.STRIPE_SECRET_KEY) {
+        if (
+          process.env.STRIPE_SECRET_KEY &&
+          user.subscriptions?.provider === "STRIPE"
+        ) {
           const stripe = stripeSDK();
 
           // Send an email about cancellation reason if provided

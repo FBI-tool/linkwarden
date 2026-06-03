@@ -75,6 +75,7 @@ export default async function handleSubscription({
         },
         create: {
           active,
+          provider: "STRIPE",
           stripeSubscriptionId: id,
           quantity,
           currentPeriodStart: new Date(periodStart * 1000),

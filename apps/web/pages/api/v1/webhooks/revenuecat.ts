@@ -9,8 +9,8 @@ type RevenueCatEvent = {
   environment?: "PRODUCTION" | "SANDBOX";
   original_transaction_id?: string;
   transaction_id?: string;
-  purchased_at_ms?: number;
-  expiration_at_ms?: number;
+  purchased_at_ms?: number | null;
+  expiration_at_ms?: number | null;
 };
 
 const subscriptionEvents = new Set([
@@ -23,13 +23,6 @@ const subscriptionEvents = new Set([
   "SUBSCRIPTION_EXTENDED",
   "TEMPORARY_ENTITLEMENT_GRANT",
 ]);
-
-const isUuid = (value?: string) =>
-  Boolean(
-    value?.match(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    )
-  );
 
 export default async function revenueCatWebhook(
   req: NextApiRequest,
@@ -72,18 +65,8 @@ export default async function revenueCatWebhook(
     return res.status(200).json({ response: "Sandbox event ignored." });
   }
 
-  const appUserIds = [
-    event.app_user_id,
-    event.original_app_user_id,
-    ...(event.aliases ?? []),
-  ].filter(isUuid) as string[];
-
-  const originalTransactionId =
-    event.original_transaction_id ?? event.transaction_id;
-
   if (
-    appUserIds.length === 0 ||
-    !originalTransactionId ||
+    !event.original_app_user_id ||
     !event.purchased_at_ms ||
     !event.expiration_at_ms
   ) {
@@ -95,11 +78,9 @@ export default async function revenueCatWebhook(
   const active = event.type !== "EXPIRATION" && currentPeriodEnd > new Date();
 
   try {
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: {
-        uuid: {
-          in: appUserIds,
-        },
+        uuid: event.original_app_user_id,
       },
     });
 
@@ -109,7 +90,7 @@ export default async function revenueCatWebhook(
 
     const subscription = await prisma.subscription.findUnique({
       where: {
-        revenueCatOriginalTransactionId: originalTransactionId,
+        revenueCatAppUserId: event.original_app_user_id,
       },
     });
 
@@ -133,7 +114,8 @@ export default async function revenueCatWebhook(
         },
         create: {
           active,
-          revenueCatOriginalTransactionId: originalTransactionId,
+          provider: "REVENUECAT",
+          revenueCatAppUserId: event.original_app_user_id,
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,
@@ -141,7 +123,7 @@ export default async function revenueCatWebhook(
         },
         update: {
           active,
-          revenueCatOriginalTransactionId: originalTransactionId,
+          revenueCatAppUserId: event.original_app_user_id,
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,

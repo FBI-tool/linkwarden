@@ -1,6 +1,7 @@
 import { prisma } from "@linkwarden/prisma";
 import { Subscription, User } from "@linkwarden/prisma/client";
-import checkSubscriptionByEmail from "./checkSubscriptionByEmail";
+import checkStripeSubscriptionByEmail from "./checkStripeSubscriptionByEmail";
+import checkRevenuecatSubscription from "./checkRevenuecatSubscription";
 
 interface UserIncludingSubscription extends User {
   subscriptions: Subscription | null;
@@ -38,48 +39,91 @@ export default async function verifySubscription(
       new Date() > user.subscriptions.currentPeriodEnd) &&
     (REQUIRE_CC || daysLeft <= 0)
   ) {
-    const subscription = await checkSubscriptionByEmail(user.email as string);
+    if (user.subscriptions?.provider === "STRIPE") {
+      const subscription = await checkStripeSubscriptionByEmail(
+        user.email as string
+      );
 
-    if (
-      !subscription ||
-      !subscription.stripeSubscriptionId ||
-      !subscription.currentPeriodEnd ||
-      !subscription.currentPeriodStart ||
-      !subscription.quantity
-    ) {
-      return null;
+      if (
+        !subscription ||
+        !subscription.stripeSubscriptionId ||
+        !subscription.currentPeriodEnd ||
+        !subscription.currentPeriodStart ||
+        !subscription.quantity
+      ) {
+        return null;
+      }
+
+      const {
+        active,
+        stripeSubscriptionId,
+        currentPeriodStart,
+        currentPeriodEnd,
+        quantity,
+      } = subscription;
+
+      await prisma.subscription
+        .upsert({
+          where: {
+            userId: user.id,
+          },
+          create: {
+            active,
+            provider: "STRIPE",
+            stripeSubscriptionId,
+            currentPeriodStart: new Date(currentPeriodStart),
+            currentPeriodEnd: new Date(currentPeriodEnd),
+            quantity,
+            userId: user.id,
+          },
+          update: {
+            active,
+            stripeSubscriptionId,
+            currentPeriodStart: new Date(currentPeriodStart),
+            currentPeriodEnd: new Date(currentPeriodEnd),
+            quantity,
+          },
+        })
+        .catch((err) => console.log(err));
+    } else {
+      // REVENUECAT
+      const subscription = await checkRevenuecatSubscription(user.uuid);
+
+      if (
+        !subscription ||
+        !subscription.currentPeriodEnd ||
+        !subscription.revenueCatSubscriptionId ||
+        !subscription.currentPeriodStart
+      ) {
+        return null;
+      }
+
+      const { active, currentPeriodStart, currentPeriodEnd } = subscription;
+
+      await prisma.subscription
+        .upsert({
+          where: {
+            userId: user.id,
+          },
+          create: {
+            active,
+            provider: "REVENUECAT",
+            revenueCatAppUserId: user.uuid,
+            currentPeriodStart,
+            currentPeriodEnd,
+            quantity: 1,
+            userId: user.id,
+          },
+          update: {
+            active,
+            revenueCatAppUserId: user.uuid,
+            currentPeriodStart,
+            currentPeriodEnd,
+            quantity: 1,
+          },
+        })
+        .catch((err) => console.log(err));
     }
-
-    const {
-      active,
-      stripeSubscriptionId,
-      currentPeriodStart,
-      currentPeriodEnd,
-      quantity,
-    } = subscription;
-
-    await prisma.subscription
-      .upsert({
-        where: {
-          userId: user.id,
-        },
-        create: {
-          active,
-          stripeSubscriptionId,
-          currentPeriodStart: new Date(currentPeriodStart),
-          currentPeriodEnd: new Date(currentPeriodEnd),
-          quantity,
-          userId: user.id,
-        },
-        update: {
-          active,
-          stripeSubscriptionId,
-          currentPeriodStart: new Date(currentPeriodStart),
-          currentPeriodEnd: new Date(currentPeriodEnd),
-          quantity,
-        },
-      })
-      .catch((err) => console.log(err));
   }
 
   return user;

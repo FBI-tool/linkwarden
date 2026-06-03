@@ -1339,7 +1339,7 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
       },
     },
     callbacks: {
-      async signIn({ user, account, profile, email, credentials }) {
+      async signIn({ user, account, email }) {
         if (!(user as User).emailVerified && !email?.verificationRequest) {
           const parentSubscriptionId = (user as User).parentSubscriptionId;
 
@@ -1367,6 +1367,7 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             if (
               STRIPE_SECRET_KEY &&
               parentSubscription?.quantity &&
+              parentSubscription.provider === "STRIPE" &&
               parentSubscription.stripeSubscriptionId &&
               verifiedChildUsersCount + 2 > // add current user and the admin
                 parentSubscription.quantity

@@ -217,12 +217,19 @@ export default function SubscribeScreen() {
   };
 
   const purchase = async () => {
-    if (!selectedPlan.package || purchaseLoading) return;
+    if (!selectedPlan.package || purchaseLoading || !user?.uuid) return;
 
     setPurchaseLoading(true);
 
     try {
-      if (user?.uuid) await Purchases.logIn(user.uuid);
+      await Purchases.logIn(user.uuid);
+      await Purchases.invalidateCustomerInfoCache();
+
+      const existingCustomerInfo = await Purchases.getCustomerInfo();
+      const alreadySubscribed =
+        await activateSubscription(existingCustomerInfo);
+
+      if (alreadySubscribed) return;
 
       const { customerInfo } = await Purchases.purchasePackage(
         selectedPlan.package
@@ -365,7 +372,7 @@ export default function SubscribeScreen() {
             accessibilityRole="button"
             accessibilityLabel={paymentButton.accessibilityLabel}
             className="w-full flex-row bg-black px-4"
-            disabled={!selectedPlan.package || purchaseLoading}
+            disabled={!selectedPlan.package || purchaseLoading || !user?.uuid}
             onPress={purchase}
             isLoading={purchaseLoading}
           >

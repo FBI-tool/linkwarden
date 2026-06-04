@@ -9,7 +9,16 @@ export const hasPassedLimit = async (
   userId: number,
   numberOfImports: number
 ) => {
-  if (!stripeEnabled) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      parentSubscriptionId: true,
+      subscriptions: { select: { id: true, quantity: true, provider: true } },
+      createdAt: true,
+    },
+  });
+
+  if (!stripeEnabled && user?.subscriptions?.provider !== "STRIPE") {
     const totalLinks = await prisma.link.count({
       where: {
         createdById: userId,
@@ -18,15 +27,6 @@ export const hasPassedLimit = async (
 
     return MAX_LINKS_PER_USER - (numberOfImports + totalLinks) < 0;
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      parentSubscriptionId: true,
-      subscriptions: { select: { id: true, quantity: true } },
-      createdAt: true,
-    },
-  });
 
   if (!user) {
     return true;

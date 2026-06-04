@@ -78,6 +78,7 @@ export default async function verifySubscription(
           },
           update: {
             active,
+            provider: "STRIPE",
             stripeSubscriptionId,
             currentPeriodStart: new Date(currentPeriodStart),
             currentPeriodEnd: new Date(currentPeriodEnd),
@@ -95,6 +96,14 @@ export default async function verifySubscription(
         !subscription.revenueCatSubscriptionId ||
         !subscription.currentPeriodStart
       ) {
+        if (user.subscriptions?.active)
+          await prisma.subscription.update({
+            where: {
+              revenueCatAppUserId: user.uuid,
+            },
+            data: { active: false },
+          });
+
         return null;
       }
 
@@ -116,6 +125,7 @@ export default async function verifySubscription(
           },
           update: {
             active,
+            provider: "REVENUECAT",
             revenueCatAppUserId: user.uuid,
             currentPeriodStart,
             currentPeriodEnd,

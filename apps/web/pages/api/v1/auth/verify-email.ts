@@ -89,7 +89,7 @@ export default async function verifyEmail(
     });
 
     // Update email in db
-    await prisma.user.update({
+    const user = await prisma.user.update({
       where: {
         email: oldEmail,
       },
@@ -97,12 +97,16 @@ export default async function verifyEmail(
         email: newEmail.toLowerCase().trim(),
         unverifiedNewEmail: null,
       },
+      include: {
+        subscriptions: true,
+      },
     });
 
     // Apply to Stripe
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
-    if (STRIPE_SECRET_KEY) await updateCustomerEmail(oldEmail, newEmail);
+    if (STRIPE_SECRET_KEY && user.subscriptions?.provider === "STRIPE")
+      await updateCustomerEmail(oldEmail, newEmail);
 
     // Clean up existing tokens
     await prisma.verificationToken.delete({

@@ -123,6 +123,7 @@ export default async function revenueCatWebhook(
         },
         update: {
           active,
+          provider: "REVENUECAT",
           revenueCatAppUserId: event.original_app_user_id,
           currentPeriodStart,
           currentPeriodEnd,

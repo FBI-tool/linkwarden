@@ -101,6 +101,7 @@ export default async function revenueCatWebhook(
         },
         data: {
           active,
+          provider: "REVENUECAT",
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,

@@ -35,6 +35,7 @@ export default async function handleSubscription({
       },
       data: {
         active,
+        provider: "STRIPE",
         quantity,
         currentPeriodStart: new Date(periodStart * 1000),
         currentPeriodEnd: new Date(periodEnd * 1000),

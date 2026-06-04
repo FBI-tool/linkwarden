@@ -1,8 +1,8 @@
 import { prisma } from "@linkwarden/prisma";
 import sendInvitationRequest from "@/lib/api/sendInvitationRequest";
 import sendVerificationRequest from "@/lib/api/sendVerificationRequest";
-import updateSeats from "@/lib/api/stripe/updateSeats";
-import verifySubscription from "@/lib/api/stripe/verifySubscription";
+import updateSeats from "@/lib/api/billing/updateSeats";
+import verifySubscription from "@/lib/api/billing/verifySubscription";
 import { getAppleClientId, getAppleClientSecret } from "@/lib/api/apple";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { User } from "@linkwarden/prisma/client";

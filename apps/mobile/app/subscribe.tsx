@@ -28,6 +28,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 const screenWidth = Dimensions.get("screen").width;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const paymentButton = Platform.select({
   ios: {
@@ -190,8 +191,21 @@ export default function SubscribeScreen() {
     if (Object.keys(customerInfo.entitlements.active).length === 0)
       return false;
 
-    await refetchUser();
-    router.replace("/(tabs)/dashboard");
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const { data } = await refetchUser();
+
+      if (data?.subscription?.active || data?.parentSubscription?.active) {
+        router.replace("/(tabs)/dashboard");
+        return true;
+      }
+
+      await wait(1000);
+    }
+
+    Alert.alert(
+      "Subscription syncing",
+      "Your purchase was completed and is still syncing. Please try again in a moment."
+    );
     return true;
   };
 

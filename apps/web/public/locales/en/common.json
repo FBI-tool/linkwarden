@@ -128,6 +128,7 @@
   "billing_settings": "Billing Settings",
   "manage_subscription_intro": "To manage/cancel your subscription, visit the",
   "billing_portal": "Billing Portal",
+  "mobile_billing_managed_externally": "Your subscription is managed through the App Store or Google Play Store. To change or cancel it, open your device's subscription settings. Seat management is also not available for subscriptions made through the mobile app at the moment.",
   "help_contact_intro": "If you still need help or encountered any issues, feel free to reach out to us at:",
   "fill_required_fields": "Please fill the required fields.",
   "deleting_message": "Deleting everything, please wait...",

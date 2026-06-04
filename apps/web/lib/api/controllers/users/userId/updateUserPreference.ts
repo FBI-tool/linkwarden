@@ -53,6 +53,7 @@ export default async function updateUserPreference(
     subscription: {
       active: subscriptions?.active,
       quantity: subscriptions?.quantity,
+      provider: subscriptions?.provider,
     },
     parentSubscription: {
       active: parentSubscription?.active,

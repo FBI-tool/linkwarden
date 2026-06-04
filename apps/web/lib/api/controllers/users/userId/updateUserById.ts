@@ -255,6 +255,7 @@ export default async function updateUserById(
     subscription: {
       active: subscriptions?.active,
       quantity: subscriptions?.quantity,
+      provider: subscriptions?.provider,
     },
     parentSubscription: {
       active: parentSubscription?.active,

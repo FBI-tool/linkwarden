@@ -52,6 +52,7 @@ export default async function getUserById(userId: number) {
     subscription: {
       active: subscriptions?.active ?? false,
       quantity: subscriptions?.quantity ?? 0,
+      provider: subscriptions?.provider,
     },
     parentSubscription: {
       active: parentSubscription?.active,

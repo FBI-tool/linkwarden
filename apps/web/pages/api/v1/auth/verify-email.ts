@@ -1,5 +1,6 @@
 import { prisma } from "@linkwarden/prisma";
 import updateCustomerEmail from "@/lib/api/stripe/updateCustomerEmail";
+import updateRevenuecatCustomerEmail from "@/lib/api/stripe/updateRevenuecatCustomerEmail";
 import { VerifyEmailSchema } from "@linkwarden/lib/schemaValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -102,11 +103,21 @@ export default async function verifyEmail(
       },
     });
 
-    // Apply to Stripe
-    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-
-    if (STRIPE_SECRET_KEY && user.subscriptions?.provider === "STRIPE")
+    // Apply to Stripe or Revenuecat
+    if (
+      process.env.STRIPE_SECRET_KEY &&
+      user.subscriptions?.provider === "STRIPE"
+    )
       await updateCustomerEmail(oldEmail, newEmail);
+    else if (
+      process.env.REVENUECAT_API_KEY &&
+      user.subscriptions?.provider === "REVENUECAT"
+    ) {
+      await updateRevenuecatCustomerEmail(
+        user.subscriptions.revenueCatAppUserId ?? user.uuid,
+        newEmail
+      );
+    }
 
     // Clean up existing tokens
     await prisma.verificationToken.delete({

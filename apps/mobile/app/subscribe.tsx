@@ -237,6 +237,7 @@ export default function SubscribeScreen() {
 
     try {
       await Purchases.logIn(user.uuid);
+      if (user.email) await Purchases.setEmail(user.email);
       await Purchases.invalidateCustomerInfoCache();
 
       const existingCustomerInfo = await Purchases.getCustomerInfo();

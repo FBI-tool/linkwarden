@@ -72,8 +72,6 @@ export default async function verifyEmail(
       },
     });
 
-    console.log(emailInUse);
-
     if (emailInUse) {
       return res.status(400).json({
         response: "Email is already in use.",
@@ -103,18 +101,13 @@ export default async function verifyEmail(
       },
     });
 
-    // Apply to Stripe or Revenuecat
-    if (
-      process.env.STRIPE_SECRET_KEY &&
-      user.subscriptions?.provider === "STRIPE"
-    )
+    if (process.env.STRIPE_SECRET_KEY) {
       await updateCustomerEmail(oldEmail, newEmail);
-    else if (
-      process.env.REVENUECAT_API_KEY &&
-      user.subscriptions?.provider === "REVENUECAT"
-    ) {
+    }
+
+    if (process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY) {
       await updateRevenuecatCustomerEmail(
-        user.subscriptions.revenueCatAppUserId ?? user.uuid,
+        user.subscriptions?.revenueCatAppUserId ?? user.uuid,
         newEmail
       );
     }

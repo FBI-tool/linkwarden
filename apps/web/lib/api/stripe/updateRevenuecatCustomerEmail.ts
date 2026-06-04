@@ -31,9 +31,13 @@ export default async function updateRevenuecatCustomerEmail(
     }
   );
 
+  if (response.status === 404) return false;
+
   if (!response.ok) {
     throw new Error(
       `RevenueCat API error: ${response.status} ${await response.text()}`
     );
   }
+
+  return true;
 }

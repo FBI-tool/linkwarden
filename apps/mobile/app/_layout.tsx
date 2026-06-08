@@ -57,10 +57,10 @@ export default Sentry.wrap(function RootLayout() {
     // Platform-specific API keys
     const iosApiKey =
       process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ??
-      "test_geEsJwIpuCVWRqsiEowgdyfOZAM";
+      "appl_KYAGLnQJZpcgxmmVIoMTMZtSnYI";
     const androidApiKey =
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ??
-      "test_geEsJwIpuCVWRqsiEowgdyfOZAM";
+      "goog_MNATzOjDJIQJIQlkBuJMkmTjxJF";
 
     if (Platform.OS === "ios") {
       Purchases.configure({ apiKey: iosApiKey });

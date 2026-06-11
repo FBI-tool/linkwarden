@@ -54,7 +54,7 @@ export default function LoginSheet() {
   }, [method]);
 
   const closeSheet = () => {
-    void SheetManager.hide("login-sheet");
+    SheetManager.hide("login-sheet");
   };
 
   const handleLogin = async () => {

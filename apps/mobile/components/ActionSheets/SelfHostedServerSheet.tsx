@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
+import type { Config } from "@linkwarden/router/config";
 import SheetHeader from "./SheetHeader";
 
 const cloudInstance = "https://cloud.linkwarden.app";
@@ -44,7 +45,7 @@ export default function SelfHostedServerSheet() {
   }, [auth.instance]);
 
   const closeSheet = () => {
-    void SheetManager.hide("self-hosted-server-sheet");
+    SheetManager.hide("self-hosted-server-sheet");
   };
 
   const setSelfHostedServer = async () => {
@@ -60,12 +61,13 @@ export default function SelfHostedServerSheet() {
         fetch(`${instance}/api/v1/config`),
         timeout(),
       ]);
+      const data = await res.json().catch(() => null);
 
-      if (!res.ok) {
+      if (!res.ok || !data?.response) {
         return Alert.alert("Error", "Could not verify this server.");
       }
 
-      await setInstance(instance);
+      await setInstance(instance, data.response as Config);
       closeSheet();
     } catch (err: any) {
       Alert.alert(

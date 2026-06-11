@@ -17,6 +17,19 @@ import { useOfflineSyncStore } from "@/lib/offlineSync";
 import { hasInactiveSubscription } from "@/lib/subscription";
 
 const cloudInstance = "https://cloud.linkwarden.app";
+const cloudConfig: Config = {
+  DISABLE_REGISTRATION: null,
+  ADMIN: null,
+  RSS_POLLING_INTERVAL_MINUTES: null,
+  EMAIL_PROVIDER: true,
+  MAX_FILE_BUFFER: null,
+  USER_CONTENT_DOMAIN: null,
+  AI_ENABLED: null,
+  INSTANCE_VERSION: null,
+  STRIPE_ENABLED: null,
+  TRIAL_PERIOD_DAYS: null,
+  REQUIRE_CC: null,
+};
 const googleWebClientId =
   process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ??
   "1097450926817-fb426eh4dkq46gmhiuoa00k6rv196g1s.apps.googleusercontent.com";
@@ -35,10 +48,26 @@ type SignUpForm = {
   email?: string;
   password: string;
   instance: string;
+  acceptPromotionalEmails?: boolean;
+};
+
+type InstanceLogins = {
+  buttonAuths?: {
+    method?: string;
+  }[];
+};
+
+type InstanceInfo = {
+  instance: string;
+  config: Config | null;
+  logins: InstanceLogins | null;
+  status: "idle" | "loading" | "success" | "error";
+  error: string;
 };
 
 type AuthStore = {
   auth: MobileAuth;
+  instanceInfo: InstanceInfo;
   signIn: (
     username: string,
     password: string,
@@ -52,15 +81,46 @@ type AuthStore = {
     email: string,
     instance: string
   ) => Promise<boolean>;
-  setInstance: (instance: string) => Promise<void>;
+  setInstance: (instance: string, config?: Config) => Promise<void>;
+  fetchInstanceInfo: (instance?: string, config?: Config) => Promise<void>;
   signOut: () => Promise<void>;
   setAuth: () => Promise<void>;
 };
+
+const cleanInstance = (instance?: string | null) =>
+  (instance || cloudInstance).trim().replace(/\/+$/, "");
+
+const getFallbackConfig = (instance: string) =>
+  instance === cloudInstance ? cloudConfig : null;
 
 const timeout = () =>
   new Promise<Response>((_, reject) =>
     setTimeout(() => reject(new Error("TIMEOUT")), 30000)
   );
+
+const fetchInstanceConfig = async (instance: string) => {
+  const res = await Promise.race([
+    fetch(`${instance}/api/v1/config`),
+    timeout(),
+  ]);
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok || !data?.response) throw new Error("CONFIG");
+
+  return data.response as Config;
+};
+
+const fetchInstanceLogins = async (instance: string) => {
+  const res = await Promise.race([
+    fetch(`${instance}/api/v1/logins`),
+    timeout(),
+  ]);
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) throw new Error("LOGINS");
+
+  return data as InstanceLogins;
+};
 
 const getPostAuthRoute = async (instance: string, session: string) => {
   try {
@@ -118,20 +178,28 @@ const requestVerificationEmail = async (email: string, instance: string) => {
   }
 };
 
-const useAuthStore = create<AuthStore>((set) => ({
+const useAuthStore = create<AuthStore>((set, get) => ({
   auth: {
     instance: "",
     session: null,
     status: "loading" as const,
   },
+  instanceInfo: {
+    instance: "",
+    config: null,
+    logins: null,
+    status: "idle",
+    error: "",
+  },
   setAuth: async () => {
     const session = await SecureStore.getItemAsync("TOKEN");
     const instance = await SecureStore.getItemAsync("INSTANCE");
+    const nextInstance = cleanInstance(instance);
 
     if (session) {
       set({
         auth: {
-          instance,
+          instance: nextInstance,
           session,
           status: "authenticated",
         },
@@ -139,24 +207,87 @@ const useAuthStore = create<AuthStore>((set) => ({
     } else {
       set({
         auth: {
-          instance: instance || cloudInstance,
+          instance: nextInstance,
           session: null,
           status: "unauthenticated",
         },
       });
     }
+
+    get().fetchInstanceInfo(nextInstance);
   },
   requestVerificationEmail,
-  setInstance: async (instance) => {
-    await SecureStore.setItemAsync("INSTANCE", instance);
+  setInstance: async (instance, config) => {
+    const nextInstance = cleanInstance(instance);
+
+    await SecureStore.setItemAsync("INSTANCE", nextInstance);
     set((state) => ({
       auth: {
         ...state.auth,
-        instance,
+        instance: nextInstance,
       },
     }));
+
+    get().fetchInstanceInfo(nextInstance, config);
   },
-  signUp: async ({ name, username, email, password, instance }) => {
+  fetchInstanceInfo: async (nextInstance, config) => {
+    const instance = cleanInstance(nextInstance || get().auth.instance);
+    const current = get().instanceInfo;
+    const currentConfig =
+      config ??
+      (current.instance === instance
+        ? current.config
+        : getFallbackConfig(instance));
+    const currentLogins = current.instance === instance ? current.logins : null;
+
+    if (
+      !config &&
+      current.instance === instance &&
+      (current.status === "loading" || current.status === "success")
+    ) {
+      return;
+    }
+
+    set({
+      instanceInfo: {
+        instance,
+        config: currentConfig,
+        logins: currentLogins,
+        status: "loading",
+        error: "",
+      },
+    });
+
+    const [configResult, loginsResult] = await Promise.allSettled([
+      config ? Promise.resolve(config) : fetchInstanceConfig(instance),
+      fetchInstanceLogins(instance),
+    ]);
+
+    if (get().instanceInfo.instance !== instance) return;
+
+    const nextConfig =
+      configResult.status === "fulfilled" ? configResult.value : currentConfig;
+    const nextLogins =
+      loginsResult.status === "fulfilled" ? loginsResult.value : currentLogins;
+
+    set({
+      instanceInfo: {
+        instance,
+        config: nextConfig,
+        logins: nextLogins,
+        status: nextConfig ? "success" : "error",
+        error: nextConfig ? "" : "Could not load this instance.",
+      },
+    });
+  },
+  signUp: async ({
+    name,
+    username,
+    email,
+    password,
+    instance,
+    acceptPromotionalEmails = false,
+  }) => {
     try {
       const res = await Promise.race([
         fetch(`${instance}/api/v1/users`, {
@@ -166,7 +297,7 @@ const useAuthStore = create<AuthStore>((set) => ({
             username,
             email,
             password,
-            acceptPromotionalEmails: false,
+            acceptPromotionalEmails,
           }),
           headers: { "Content-Type": "application/json" },
         }),
@@ -412,6 +543,7 @@ const useAuthStore = create<AuthStore>((set) => ({
   },
   signOut: async () => {
     const instance = await SecureStore.getItemAsync("INSTANCE");
+    const nextInstance = cleanInstance(instance);
 
     await SecureStore.deleteItemAsync("TOKEN");
 
@@ -426,11 +558,13 @@ const useAuthStore = create<AuthStore>((set) => ({
 
     set({
       auth: {
-        instance: instance || cloudInstance,
+        instance: nextInstance,
         session: null,
         status: "unauthenticated",
       },
     });
+
+    get().fetchInstanceInfo(nextInstance);
 
     router.replace("/");
   },

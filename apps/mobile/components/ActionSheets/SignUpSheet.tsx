@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
+  Linking,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import ActionSheet, { SheetManager } from "react-native-actions-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { Check } from "lucide-react-native";
 import {
   isAtLeastInstanceVersion,
   type Config,
@@ -38,22 +40,14 @@ const cloudConfig: Config = {
 
 const cleanInstance = (instance: string) => instance.trim().replace(/\/+$/, "");
 
-const timeout = () =>
-  new Promise<Response>((_, reject) =>
-    setTimeout(() => reject(new Error("TIMEOUT")), 30000)
-  );
-
 export default function SignUpSheet() {
-  const { auth, signUp, requestVerificationEmail, setInstance } =
+  const { auth, instanceInfo, signUp, requestVerificationEmail } =
     useAuthStore();
   const { colorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const theme = rawTheme[colorScheme as ThemeName];
   const [isLoading, setIsLoading] = useState(false);
-  const [isConfigLoading, setIsConfigLoading] = useState(false);
-  const [config, setConfig] = useState<Config | null>(null);
-  const [configInstance, setConfigInstance] = useState("");
-  const [configError, setConfigError] = useState("");
+  const [acceptPromotionalEmails, setAcceptPromotionalEmails] = useState(false);
   const [sentTo, setSentTo] = useState<{
     email: string;
     instance: string;
@@ -68,18 +62,19 @@ export default function SignUpSheet() {
   });
 
   const instance = cleanInstance(form.instance);
+  const currentInstanceInfo =
+    instanceInfo.instance === instance ? instanceInfo : null;
   const currentConfig =
     instance === cloudInstance
-      ? cloudConfig
-      : configInstance === instance
-        ? config
-        : null;
+      ? currentInstanceInfo?.config || cloudConfig
+      : currentInstanceInfo?.config || null;
+  const isConfigLoading =
+    currentInstanceInfo?.status === "loading" && !currentConfig;
+  const configError = currentInstanceInfo?.error || "";
   const emailSignUp = currentConfig?.EMAIL_PROVIDER === true;
   const supportsMobileSignup =
     instance === cloudInstance ||
     isAtLeastInstanceVersion(currentConfig?.INSTANCE_VERSION, "v2.15.0");
-  const instanceName =
-    instance === cloudInstance ? "cloud.linkwarden.app" : instance;
 
   useEffect(() => {
     setForm((prev) => ({
@@ -88,78 +83,8 @@ export default function SignUpSheet() {
     }));
   }, [auth.instance]);
 
-  useEffect(() => {
-    let active = true;
-
-    if (!instance) {
-      setConfig(null);
-      setConfigInstance("");
-      setConfigError("");
-      setIsConfigLoading(false);
-      return;
-    }
-
-    if (instance === cloudInstance) {
-      setConfig(null);
-      setConfigInstance("");
-      setConfigError("");
-      setIsConfigLoading(false);
-      return;
-    }
-
-    setConfig(null);
-    setConfigError("");
-    setIsConfigLoading(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await Promise.race([
-          fetch(`${instance}/api/v1/config`),
-          timeout(),
-        ]);
-        const data = await res.json().catch(() => null);
-
-        if (!active) return;
-
-        if (res.ok) {
-          const nextConfig = data.response as Config;
-
-          if (
-            nextConfig.EMAIL_PROVIDER === true &&
-            !isAtLeastInstanceVersion(nextConfig.INSTANCE_VERSION, "v2.15.0")
-          ) {
-            const reset = () => {
-              void setInstance(cloudInstance);
-            };
-
-            Alert.alert(
-              "Sign up through the web",
-              "This instance needs to be updated to support mobile sign-up. You can sign up through the web, then come back here to log in.",
-              [{ text: "OK", onPress: reset }],
-              { onDismiss: reset }
-            );
-          }
-
-          setConfig(nextConfig);
-          setConfigInstance(instance);
-        } else {
-          setConfigError("Could not load this instance.");
-        }
-      } catch {
-        if (active) setConfigError("Could not reach this instance.");
-      } finally {
-        if (active) setIsConfigLoading(false);
-      }
-    }, 400);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [instance]);
-
   const closeSheet = () => {
-    void SheetManager.hide("sign-up-sheet");
+    SheetManager.hide("sign-up-sheet");
   };
 
   const register = async () => {
@@ -195,6 +120,7 @@ export default function SignUpSheet() {
       username: emailSignUp ? undefined : username,
       password: form.password,
       instance,
+      acceptPromotionalEmails,
     });
     setIsLoading(false);
 
@@ -317,6 +243,32 @@ export default function SignUpSheet() {
                 setForm({ ...form, passwordConfirmation: text })
               }
             />
+            <TouchableOpacity
+              activeOpacity={0.75}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acceptPromotionalEmails }}
+              className="flex-row items-center gap-3 py-1"
+              onPress={() => setAcceptPromotionalEmails((checked) => !checked)}
+            >
+              <View
+                className="h-5 w-5 items-center justify-center rounded border"
+                style={{
+                  backgroundColor: acceptPromotionalEmails
+                    ? theme.accent
+                    : "transparent",
+                  borderColor: acceptPromotionalEmails
+                    ? theme.accent
+                    : theme.neutral,
+                }}
+              >
+                {acceptPromotionalEmails && (
+                  <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                )}
+              </View>
+              <Text className="text-neutral flex-1 text-sm">
+                Get notified about new features and offers via email.
+              </Text>
+            </TouchableOpacity>
             <Button
               variant="accent"
               size="lg"
@@ -326,6 +278,25 @@ export default function SignUpSheet() {
             >
               <Text className="text-white text-xl">Sign Up</Text>
             </Button>
+            <Text className="text-neutral text-center text-xs px-2">
+              By signing up, you agree to our{" "}
+              <Text
+                className="font-semibold"
+                onPress={() => Linking.openURL("https://linkwarden.app/tos")}
+              >
+                Terms of Service
+              </Text>{" "}
+              and{" "}
+              <Text
+                className="font-semibold"
+                onPress={() =>
+                  Linking.openURL("https://linkwarden.app/privacy-policy")
+                }
+              >
+                Privacy Policy
+              </Text>
+              .
+            </Text>
           </>
         )}
       </ScrollView>

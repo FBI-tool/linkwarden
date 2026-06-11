@@ -159,7 +159,7 @@ export default function LinkDetailsSheet(
       }
     };
 
-    void fetchOwner();
+    fetchOwner();
 
     return () => {
       cancelled = true;
@@ -167,7 +167,7 @@ export default function LinkDetailsSheet(
   }, [auth.instance, auth.session, link?.collection.ownerId, user]);
 
   const closeSheet = () => {
-    void SheetManager.hide("link-details-sheet");
+    SheetManager.hide("link-details-sheet");
   };
 
   const handleOpenOriginal = () => {
@@ -186,7 +186,7 @@ export default function LinkDetailsSheet(
       return;
     }
 
-    void Linking.openURL(
+    Linking.openURL(
       format !== null
         ? `${auth.instance}/preserved/${link.id}?format=${format}`
         : (link.url as string)
@@ -218,7 +218,7 @@ export default function LinkDetailsSheet(
     if (!link?.url) return;
 
     closeSheet();
-    void Linking.openURL(
+    Linking.openURL(
       `https://web.archive.org/web/${link.url.replace(/(^\w+:|^)\/\//, "")}`
     );
   };

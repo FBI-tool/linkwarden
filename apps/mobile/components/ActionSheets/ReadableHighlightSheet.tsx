@@ -72,7 +72,7 @@ export default function ReadableHighlightSheet(
   }, [props.payload?.draft]);
 
   const closeSheet = () => {
-    void SheetManager.hide("readable-highlight-sheet");
+    SheetManager.hide("readable-highlight-sheet");
   };
 
   const saveHighlight = usePostHighlight(draft?.linkId || 0, auth);

@@ -34,7 +34,7 @@ function createSafeLookup() {
           ? 6
           : normalizedOptions.family;
 
-    void resolveHostnameForServerSideFetch(hostname, defaultHostnameLookup)
+    resolveHostnameForServerSideFetch(hostname, defaultHostnameLookup)
       .then((resolved) => {
         if (normalizedOptions.all) {
           callback(null, resolved);

@@ -1,15 +1,12 @@
 import { Button } from "@/components/ui/Button";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
-import {
-  isAtLeastInstanceVersion,
-  type Config,
-} from "@linkwarden/router/config";
+import { isAtLeastInstanceVersion } from "@linkwarden/router/config";
 import { FontAwesome } from "@expo/vector-icons";
 import { Redirect } from "expo-router";
 import { ChevronDown, CircleHelp } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Dimensions,
   Image,
@@ -31,35 +28,53 @@ const displayInstance = (instance: string | null | undefined) =>
   (instance || cloudInstance).replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
 export default function HomeScreen() {
-  const { auth, setInstance, signInWithApple, signInWithGoogle } =
-    useAuthStore();
+  const {
+    auth,
+    instanceInfo,
+    setInstance,
+    fetchInstanceInfo,
+    signInWithApple,
+    signInWithGoogle,
+  } = useAuthStore();
   const { colorScheme } = useColorScheme();
   const theme = rawTheme[colorScheme as ThemeName];
   const serverName = displayInstance(auth.instance);
   const instance = (auth.instance || cloudInstance).trim().replace(/\/+$/, "");
-  const [appleEnabled, setAppleEnabled] = useState(
-    Platform.OS === "ios" && instance === cloudInstance
-  );
-  const [googleEnabled, setGoogleEnabled] = useState(
-    instance === cloudInstance
-  );
-  const [isCheckingOAuth, setIsCheckingOAuth] = useState(false);
+  const currentInstanceInfo =
+    instanceInfo.instance === instance ? instanceInfo : null;
+  const buttonAuths = currentInstanceInfo?.logins?.buttonAuths;
+  const versionOk = currentInstanceInfo?.config
+    ? isAtLeastInstanceVersion(
+        currentInstanceInfo.config.INSTANCE_VERSION,
+        "v2.15.0"
+      )
+    : instance === cloudInstance;
+  const hasApple = buttonAuths
+    ? buttonAuths.some((button) => button.method === "apple")
+    : instance === cloudInstance;
+  const hasGoogle = buttonAuths
+    ? buttonAuths.some((button) => button.method === "google")
+    : instance === cloudInstance;
+  const appleEnabled = Platform.OS === "ios" && hasApple && versionOk;
+  const googleEnabled = hasGoogle && versionOk;
+  const isCheckingOAuth =
+    currentInstanceInfo?.status === "loading" && !buttonAuths;
 
   const openLoginSheet = () => {
-    void SheetManager.show("login-sheet");
+    SheetManager.show("login-sheet");
   };
 
   const openSignUpSheet = () => {
-    void SheetManager.show("sign-up-sheet");
+    SheetManager.show("sign-up-sheet");
   };
 
   const setCloudServer = () => {
-    void setInstance(cloudInstance);
+    setInstance(cloudInstance);
   };
 
   const openSelfHostedSheet = () => {
     requestAnimationFrame(() => {
-      void SheetManager.show("self-hosted-server-sheet");
+      SheetManager.show("self-hosted-server-sheet");
     });
   };
 
@@ -86,57 +101,8 @@ export default function HomeScreen() {
         : "Google";
 
   useEffect(() => {
-    if (!instance) {
-      setAppleEnabled(false);
-      setGoogleEnabled(false);
-      setIsCheckingOAuth(false);
-      return;
-    }
-
-    setAppleEnabled(Platform.OS === "ios" && instance === cloudInstance);
-    setGoogleEnabled(instance === cloudInstance);
-    setIsCheckingOAuth(true);
-    let active = true;
-    const timer = setTimeout(async () => {
-      try {
-        const [configRes, loginsRes] = await Promise.all([
-          fetch(`${instance}/api/v1/config`),
-          fetch(`${instance}/api/v1/logins`),
-        ]);
-
-        if (!active || !configRes.ok || !loginsRes.ok) return;
-
-        const config = ((await configRes.json())?.response ??
-          null) as Config | null;
-        const logins = await loginsRes.json().catch(() => null);
-        const versionOk = isAtLeastInstanceVersion(
-          config?.INSTANCE_VERSION,
-          "v2.15.0"
-        );
-        const hasApple =
-          logins?.buttonAuths?.some(
-            (b: { method?: string }) => b.method === "apple"
-          ) === true;
-        const hasGoogle =
-          logins?.buttonAuths?.some(
-            (b: { method?: string }) => b.method === "google"
-          ) === true;
-
-        if (active) {
-          setAppleEnabled(Platform.OS === "ios" && hasApple && versionOk);
-          setGoogleEnabled(hasGoogle && versionOk);
-        }
-      } catch {
-      } finally {
-        if (active) setIsCheckingOAuth(false);
-      }
-    }, 400);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [instance]);
+    fetchInstanceInfo(instance);
+  }, [fetchInstanceInfo, instance]);
 
   if (auth.session) {
     return <Redirect href="/dashboard" />;
@@ -229,7 +195,7 @@ export default function HomeScreen() {
                       disabled={isCheckingOAuth}
                       onPress={() => {
                         if (isCheckingOAuth) return;
-                        void signInWithApple(instance);
+                        signInWithApple(instance);
                       }}
                     >
                       <FontAwesome
@@ -248,7 +214,7 @@ export default function HomeScreen() {
                       disabled={isCheckingOAuth}
                       onPress={() => {
                         if (isCheckingOAuth) return;
-                        void signInWithGoogle(instance);
+                        signInWithGoogle(instance);
                       }}
                     >
                       <FontAwesome

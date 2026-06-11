@@ -21,7 +21,7 @@ export default function SupportSheet() {
   const insets = useSafeAreaInsets();
 
   const closeSheet = () => {
-    void SheetManager.hide("support-sheet");
+    SheetManager.hide("support-sheet");
   };
 
   return (

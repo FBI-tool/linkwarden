@@ -227,149 +227,145 @@ function getReaderStyleConfig({
   };
 }
 
-const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFormat(
-  {
-    link,
-    setIsLoading,
-  }: Props,
-  ref
-) {
-  const FORMAT = ArchivedFormat.readability;
+const ReadableFormat = forwardRef<ReadableFormatRef, Props>(
+  function ReadableFormat({ link, setIsLoading }: Props, ref) {
+    const FORMAT = ArchivedFormat.readability;
 
-  const { auth } = useAuthStore();
-  const { reader } = useReaderStore();
-  const [content, setContent] = useState<string>("");
-  const [disableHighlightMenu, setDisableHighlightMenu] = useState(false);
-  const [webViewHtml, setWebViewHtml] = useState("");
-  const { colorScheme } = useColorScheme();
-  const webViewRef = useRef<any>(null);
-  const latestSelectionRef = useRef<SelectionInfo | null>(null);
-  const latestReaderStyleConfigRef = useRef<ReaderStyleConfig | null>(null);
-  const pendingSelectionTextRef = useRef<string | null>(null);
-  const pendingHighlightScrollIdRef = useRef<number | null>(null);
-  const isWebViewReadyRef = useRef(false);
+    const { auth } = useAuthStore();
+    const { reader } = useReaderStore();
+    const [content, setContent] = useState<string>("");
+    const [disableHighlightMenu, setDisableHighlightMenu] = useState(false);
+    const [webViewHtml, setWebViewHtml] = useState("");
+    const { colorScheme } = useColorScheme();
+    const webViewRef = useRef<any>(null);
+    const latestSelectionRef = useRef<SelectionInfo | null>(null);
+    const latestReaderStyleConfigRef = useRef<ReaderStyleConfig | null>(null);
+    const pendingSelectionTextRef = useRef<string | null>(null);
+    const pendingHighlightScrollIdRef = useRef<number | null>(null);
+    const isWebViewReadyRef = useRef(false);
 
-  useEffect(() => {
-    loadCacheOrFetch({
-      filePath:
-        FileSystem.documentDirectory + `archivedData/readable/link_${link.id}.html`,
-      setContent,
-      getCachedContent: (filePath) => FileSystem.readAsStringAsync(filePath),
-      fetchContent: async (filePath) => {
-        const apiUrl = `${auth.instance}/api/v1/archives/${link.id}?format=${FORMAT}`;
+    useEffect(() => {
+      loadCacheOrFetch({
+        filePath:
+          FileSystem.documentDirectory +
+          `archivedData/readable/link_${link.id}.html`,
+        setContent,
+        getCachedContent: (filePath) => FileSystem.readAsStringAsync(filePath),
+        fetchContent: async (filePath) => {
+          const apiUrl = `${auth.instance}/api/v1/archives/${link.id}?format=${FORMAT}`;
 
-        const response = await fetch(apiUrl, {
-          headers: { Authorization: `Bearer ${auth.session}` },
-        });
+          const response = await fetch(apiUrl, {
+            headers: { Authorization: `Bearer ${auth.session}` },
+          });
 
-        const data = (await response.json()).content;
+          const data = (await response.json()).content;
 
-        await FileSystem.writeAsStringAsync(filePath, data, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
+          await FileSystem.writeAsStringAsync(filePath, data, {
+            encoding: FileSystem.EncodingType.UTF8,
+          });
 
-        return data;
-      },
+          return data;
+        },
+      });
+    }, [FORMAT, auth.instance, auth.session, link.id]);
+
+    const systemTheme: ThemeName = colorScheme === "dark" ? "dark" : "light";
+    const { theme, isDark } = resolveReaderTheme(
+      reader.readableBackgroundColor,
+      systemTheme as ThemeName
+    );
+
+    const title = decode(link.name || link.description || link.url || "");
+    const dateStr = new Date(
+      link?.importDate || link.createdAt
+    ).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
-  }, [FORMAT, auth.instance, auth.session, link.id]);
 
-  const systemTheme: ThemeName = colorScheme === "dark" ? "dark" : "light";
-  const { theme, isDark } = resolveReaderTheme(
-    reader.readableBackgroundColor,
-    systemTheme as ThemeName
-  );
+    const { data: linkHighlights = [] } = useGetLinkHighlights(link.id, auth);
 
-  const title = decode(link.name || link.description || link.url || "");
-  const dateStr = new Date(
-    link?.importDate || link.createdAt
-  ).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+    const clearWebSelection = useCallback(() => {
+      pendingSelectionTextRef.current = null;
 
-  const { data: linkHighlights = [] } = useGetLinkHighlights(link.id, auth);
-
-  const clearWebSelection = useCallback(() => {
-    pendingSelectionTextRef.current = null;
-
-    webViewRef.current?.injectJavaScript(`
+      webViewRef.current?.injectJavaScript(`
       if (window.__READABLE_VIEW__?.clearSelection) {
         window.__READABLE_VIEW__.clearSelection();
       }
       true;
     `);
-  }, []);
+    }, []);
 
-  const showHighlightSheet = useCallback(
-    async (draft: ReadableHighlightDraft) => {
-      try {
-        await SheetManager.show("readable-highlight-sheet", {
-          payload: {
-            draft,
-          },
-        });
-      } finally {
-        clearWebSelection();
-      }
-    },
-    [clearWebSelection]
-  );
+    const showHighlightSheet = useCallback(
+      async (draft: ReadableHighlightDraft) => {
+        try {
+          await SheetManager.show("readable-highlight-sheet", {
+            payload: {
+              draft,
+            },
+          });
+        } finally {
+          clearWebSelection();
+        }
+      },
+      [clearWebSelection]
+    );
 
-  const openDraftFromSelection = useCallback(
-    (selection: SelectionInfo) => {
-      if (!selection.text.trim()) {
-        clearWebSelection();
-        return;
-      }
+    const openDraftFromSelection = useCallback(
+      (selection: SelectionInfo) => {
+        if (!selection.text.trim()) {
+          clearWebSelection();
+          return;
+        }
 
-      if (selection.text.length > MAX_HIGHLIGHT_TEXT_LENGTH) {
-        Alert.alert(
-          "Selection too long",
-          "Please select a shorter passage before creating a highlight."
+        if (selection.text.length > MAX_HIGHLIGHT_TEXT_LENGTH) {
+          Alert.alert(
+            "Selection too long",
+            "Please select a shorter passage before creating a highlight."
+          );
+          clearWebSelection();
+          return;
+        }
+
+        const existingHighlight = findMatchingHighlight(
+          linkHighlights,
+          selection
         );
-        clearWebSelection();
-        return;
-      }
+        pendingSelectionTextRef.current = null;
 
-      const existingHighlight = findMatchingHighlight(
-        linkHighlights,
-        selection
-      );
-      pendingSelectionTextRef.current = null;
+        showHighlightSheet({
+          highlightId: existingHighlight?.id ?? null,
+          linkId: selection.linkId,
+          text: selection.text,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          color: normalizeHighlightColor(existingHighlight?.color),
+          comment: existingHighlight?.comment ?? "",
+        });
+      },
+      [clearWebSelection, linkHighlights, showHighlightSheet]
+    );
 
-      void showHighlightSheet({
-        highlightId: existingHighlight?.id ?? null,
-        linkId: selection.linkId,
-        text: selection.text,
-        startOffset: selection.startOffset,
-        endOffset: selection.endOffset,
-        color: normalizeHighlightColor(existingHighlight?.color),
-        comment: existingHighlight?.comment ?? "",
-      });
-    },
-    [clearWebSelection, linkHighlights, showHighlightSheet]
-  );
+    const openDraftFromHighlight = useCallback(
+      (highlight: Highlight) => {
+        pendingSelectionTextRef.current = null;
 
-  const openDraftFromHighlight = useCallback(
-    (highlight: Highlight) => {
-      pendingSelectionTextRef.current = null;
+        showHighlightSheet({
+          highlightId: highlight.id,
+          linkId: highlight.linkId,
+          text: highlight.text,
+          startOffset: highlight.startOffset,
+          endOffset: highlight.endOffset,
+          color: normalizeHighlightColor(highlight.color),
+          comment: highlight.comment ?? "",
+        });
+      },
+      [showHighlightSheet]
+    );
 
-      void showHighlightSheet({
-        highlightId: highlight.id,
-        linkId: highlight.linkId,
-        text: highlight.text,
-        startOffset: highlight.startOffset,
-        endOffset: highlight.endOffset,
-        color: normalizeHighlightColor(highlight.color),
-        comment: highlight.comment ?? "",
-      });
-    },
-    [showHighlightSheet]
-  );
-
-  const requestLatestSelection = useCallback(() => {
-    webViewRef.current?.injectJavaScript(`
+    const requestLatestSelection = useCallback(() => {
+      webViewRef.current?.injectJavaScript(`
       (function () {
         const selection =
           window.__READABLE_VIEW__?.getSelectionInfo?.() ?? null;
@@ -383,12 +379,12 @@ const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFor
       })();
       true;
     `);
-  }, []);
+    }, []);
 
-  const syncHighlightsToWebView = useCallback((highlights: Highlight[]) => {
-    if (!isWebViewReadyRef.current) return;
+    const syncHighlightsToWebView = useCallback((highlights: Highlight[]) => {
+      if (!isWebViewReadyRef.current) return;
 
-    webViewRef.current?.injectJavaScript(`
+      webViewRef.current?.injectJavaScript(`
       if (window.__READABLE_VIEW__?.renderHighlights) {
         window.__READABLE_VIEW__.renderHighlights(${escapeForInjectedScript(
           highlights
@@ -396,42 +392,42 @@ const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFor
       }
       true;
     `);
-  }, []);
+    }, []);
 
-  const scrollToHighlightInWebView = useCallback((highlightId: number) => {
-    if (!isWebViewReadyRef.current) return;
+    const scrollToHighlightInWebView = useCallback((highlightId: number) => {
+      if (!isWebViewReadyRef.current) return;
 
-    webViewRef.current?.injectJavaScript(`
+      webViewRef.current?.injectJavaScript(`
       if (window.__READABLE_VIEW__?.scrollToHighlight) {
         window.__READABLE_VIEW__.scrollToHighlight(${highlightId});
       }
       true;
     `);
-  }, []);
+    }, []);
 
-  const readerStyleConfig = useMemo(
-    () =>
-      getReaderStyleConfig({
-        fontFamily: getReadableFontFamily(reader.readableFontFamily),
-        fontSize: reader.readableFontSize,
-        lineHeight: reader.readableLineHeight,
-        theme,
+    const readerStyleConfig = useMemo(
+      () =>
+        getReaderStyleConfig({
+          fontFamily: getReadableFontFamily(reader.readableFontFamily),
+          fontSize: reader.readableFontSize,
+          lineHeight: reader.readableLineHeight,
+          theme,
+          isDark,
+        }),
+      [
         isDark,
-      }),
-    [
-      isDark,
-      reader.readableFontFamily,
-      reader.readableFontSize,
-      reader.readableLineHeight,
-      theme,
-    ]
-  );
+        reader.readableFontFamily,
+        reader.readableFontSize,
+        reader.readableLineHeight,
+        theme,
+      ]
+    );
 
-  const syncReaderStylesToWebView = useCallback(
-    (styles: ReaderStyleConfig) => {
-      if (!isWebViewReadyRef.current) return;
+    const syncReaderStylesToWebView = useCallback(
+      (styles: ReaderStyleConfig) => {
+        if (!isWebViewReadyRef.current) return;
 
-      webViewRef.current?.injectJavaScript(`
+        webViewRef.current?.injectJavaScript(`
         if (window.__READABLE_VIEW__?.applyReaderStyles) {
           window.__READABLE_VIEW__.applyReaderStyles(
             ${escapeForInjectedScript(styles)}
@@ -439,53 +435,53 @@ const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFor
         }
         true;
       `);
-    },
-    []
-  );
-
-  useEffect(() => {
-    latestReaderStyleConfigRef.current = readerStyleConfig;
-  }, [readerStyleConfig]);
-
-  const flushPendingHighlightScroll = useCallback(() => {
-    if (
-      !isWebViewReadyRef.current ||
-      pendingHighlightScrollIdRef.current === null
-    ) {
-      return;
-    }
-
-    scrollToHighlightInWebView(pendingHighlightScrollIdRef.current);
-    pendingHighlightScrollIdRef.current = null;
-  }, [scrollToHighlightInWebView]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      scrollToHighlight: (highlightId: number) => {
-        pendingHighlightScrollIdRef.current = highlightId;
-        flushPendingHighlightScroll();
       },
-    }),
-    [flushPendingHighlightScroll]
-  );
-
-  useEffect(() => {
-    syncHighlightsToWebView(linkHighlights);
-  }, [linkHighlights, syncHighlightsToWebView]);
-
-  useEffect(() => {
-    syncReaderStylesToWebView(readerStyleConfig);
-  }, [readerStyleConfig, syncReaderStylesToWebView]);
-
-  useEffect(() => {
-    const currentReaderStyleConfig =
-      latestReaderStyleConfigRef.current ?? readerStyleConfig;
-    const initialStyles = escapeForInlineScript(
-      JSON.stringify(currentReaderStyleConfig)
+      []
     );
 
-    setWebViewHtml(`
+    useEffect(() => {
+      latestReaderStyleConfigRef.current = readerStyleConfig;
+    }, [readerStyleConfig]);
+
+    const flushPendingHighlightScroll = useCallback(() => {
+      if (
+        !isWebViewReadyRef.current ||
+        pendingHighlightScrollIdRef.current === null
+      ) {
+        return;
+      }
+
+      scrollToHighlightInWebView(pendingHighlightScrollIdRef.current);
+      pendingHighlightScrollIdRef.current = null;
+    }, [scrollToHighlightInWebView]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollToHighlight: (highlightId: number) => {
+          pendingHighlightScrollIdRef.current = highlightId;
+          flushPendingHighlightScroll();
+        },
+      }),
+      [flushPendingHighlightScroll]
+    );
+
+    useEffect(() => {
+      syncHighlightsToWebView(linkHighlights);
+    }, [linkHighlights, syncHighlightsToWebView]);
+
+    useEffect(() => {
+      syncReaderStylesToWebView(readerStyleConfig);
+    }, [readerStyleConfig, syncReaderStylesToWebView]);
+
+    useEffect(() => {
+      const currentReaderStyleConfig =
+        latestReaderStyleConfigRef.current ?? readerStyleConfig;
+      const initialStyles = escapeForInlineScript(
+        JSON.stringify(currentReaderStyleConfig)
+      );
+
+      setWebViewHtml(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -504,7 +500,9 @@ const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFor
           --rv-link-color: ${currentReaderStyleConfig.linkColor};
           --rv-mark-bg: ${currentReaderStyleConfig.markBackground};
           --rv-mark-color: ${currentReaderStyleConfig.markColor};
-          --rv-neutral-border-color: ${currentReaderStyleConfig.neutralBorderColor};
+          --rv-neutral-border-color: ${
+            currentReaderStyleConfig.neutralBorderColor
+          };
           --rv-neutral-color: ${currentReaderStyleConfig.neutralColor};
           --rv-p-font-size: ${currentReaderStyleConfig.paragraphFontSize};
           --rv-p-line-height: ${currentReaderStyleConfig.lineHeight};
@@ -963,158 +961,159 @@ const ReadableFormat = forwardRef<ReadableFormatRef, Props>(function ReadableFor
     </body>
     </html>
   `);
-    isWebViewReadyRef.current = false;
-  }, [
-    content,
-    dateStr,
-    link.id,
-    link.url,
-    title,
-  ]);
+      isWebViewReadyRef.current = false;
+    }, [content, dateStr, link.id, link.url, title]);
 
-  useEffect(() => {
-    latestSelectionRef.current = null;
-    pendingSelectionTextRef.current = null;
-    pendingHighlightScrollIdRef.current = null;
-    setDisableHighlightMenu(false);
-    clearWebSelection();
-    void SheetManager.hide("readable-highlight-sheet");
-  }, [clearWebSelection, link.id]);
-
-  if (!content || !webViewHtml) {
-    return <ReadableSkeleton theme={theme} />;
-  }
-
-  const handleCustomMenuSelection = (event: {
-    nativeEvent: {
-      key: string;
-      selectedText: string;
-    };
-  }) => {
-    const selectedText = event.nativeEvent.selectedText || "";
-
-    if (event.nativeEvent.key === COPY_MENU_KEY) {
-      if (selectedText) {
-        void Clipboard.setStringAsync(selectedText);
-      }
+    useEffect(() => {
+      latestSelectionRef.current = null;
+      pendingSelectionTextRef.current = null;
+      pendingHighlightScrollIdRef.current = null;
+      setDisableHighlightMenu(false);
       clearWebSelection();
-      return;
+      SheetManager.hide("readable-highlight-sheet");
+    }, [clearWebSelection, link.id]);
+
+    if (!content || !webViewHtml) {
+      return <ReadableSkeleton theme={theme} />;
     }
 
-    if (event.nativeEvent.key === SEARCH_WEB_MENU_KEY) {
-      const normalizedText = normalizeSelectedText(selectedText);
+    const handleCustomMenuSelection = (event: {
+      nativeEvent: {
+        key: string;
+        selectedText: string;
+      };
+    }) => {
+      const selectedText = event.nativeEvent.selectedText || "";
 
-      if (normalizedText) {
-        void Linking.openURL(
-          `https://www.google.com/search?q=${encodeURIComponent(
-            normalizedText
-          )}`
-        );
-      }
-
-      clearWebSelection();
-      return;
-    }
-
-    if (event.nativeEvent.key !== HIGHLIGHT_MENU_KEY) return;
-
-    const normalizedText = normalizeSelectedText(selectedText);
-    if (!normalizedText) return;
-
-    const selection = latestSelectionRef.current;
-
-    if (selection && normalizeSelectedText(selection.text) === normalizedText) {
-      openDraftFromSelection(selection);
-      return;
-    }
-
-    pendingSelectionTextRef.current = normalizedText;
-    requestLatestSelection();
-  };
-
-  const handleWebViewMessage = (event: { nativeEvent: { data: string } }) => {
-    let message:
-      | {
-          type?: string;
-          payload?: unknown;
+      if (event.nativeEvent.key === COPY_MENU_KEY) {
+        if (selectedText) {
+          Clipboard.setStringAsync(selectedText);
         }
-      | undefined;
-
-    try {
-      message = JSON.parse(event.nativeEvent.data);
-    } catch {
-      return;
-    }
-
-    if (message?.type === "ready") {
-      isWebViewReadyRef.current = true;
-      syncReaderStylesToWebView(readerStyleConfig);
-      syncHighlightsToWebView(linkHighlights);
-      flushPendingHighlightScroll();
-      return;
-    }
-
-    if (
-      message?.type === "selection-context" &&
-      isSelectionContext(message.payload)
-    ) {
-      setDisableHighlightMenu(message.payload.disableHighlightMenu);
-      return;
-    }
-
-    if (message?.type === "selection") {
-      if (!isSelectionInfo(message.payload)) {
-        latestSelectionRef.current = null;
-        pendingSelectionTextRef.current = null;
+        clearWebSelection();
         return;
       }
 
-      latestSelectionRef.current = message.payload;
+      if (event.nativeEvent.key === SEARCH_WEB_MENU_KEY) {
+        const normalizedText = normalizeSelectedText(selectedText);
+
+        if (normalizedText) {
+          Linking.openURL(
+            `https://www.google.com/search?q=${encodeURIComponent(
+              normalizedText
+            )}`
+          );
+        }
+
+        clearWebSelection();
+        return;
+      }
+
+      if (event.nativeEvent.key !== HIGHLIGHT_MENU_KEY) return;
+
+      const normalizedText = normalizeSelectedText(selectedText);
+      if (!normalizedText) return;
+
+      const selection = latestSelectionRef.current;
 
       if (
-        pendingSelectionTextRef.current &&
-        normalizeSelectedText(message.payload.text) ===
-          pendingSelectionTextRef.current
+        selection &&
+        normalizeSelectedText(selection.text) === normalizedText
       ) {
-        pendingSelectionTextRef.current = null;
-        openDraftFromSelection(message.payload);
+        openDraftFromSelection(selection);
         return;
       }
 
-      pendingSelectionTextRef.current = null;
-      return;
-    }
+      pendingSelectionTextRef.current = normalizedText;
+      requestLatestSelection();
+    };
 
-    if (message?.type === "highlight-press" && isHighlight(message.payload)) {
-      openDraftFromHighlight(message.payload);
-    }
-  };
+    const handleWebViewMessage = (event: { nativeEvent: { data: string } }) => {
+      let message:
+        | {
+            type?: string;
+            payload?: unknown;
+          }
+        | undefined;
 
-  return (
-    <WebView
-      ref={webViewRef}
-      source={{ html: webViewHtml }}
-      style={{
-        flex: 1,
-        backgroundColor: "transparent",
-      }}
-      onLoadEnd={() => setIsLoading(false)}
-      onMessage={handleWebViewMessage}
-      onCustomMenuSelection={handleCustomMenuSelection}
-      onShouldStartLoadWithRequest={(request) => {
-        if (request.url === "about:blank" || request.url.startsWith("data:")) {
-          return true;
-        }
-        Linking.openURL(request.url);
-        return false;
-      }}
-      javaScriptEnabled
-      menuItems={
-        disableHighlightMenu ? NON_HIGHLIGHT_MENU_ITEMS : DEFAULT_MENU_ITEMS
+      try {
+        message = JSON.parse(event.nativeEvent.data);
+      } catch {
+        return;
       }
-      originWhitelist={["*"]}
-    />
-  );
-});
+
+      if (message?.type === "ready") {
+        isWebViewReadyRef.current = true;
+        syncReaderStylesToWebView(readerStyleConfig);
+        syncHighlightsToWebView(linkHighlights);
+        flushPendingHighlightScroll();
+        return;
+      }
+
+      if (
+        message?.type === "selection-context" &&
+        isSelectionContext(message.payload)
+      ) {
+        setDisableHighlightMenu(message.payload.disableHighlightMenu);
+        return;
+      }
+
+      if (message?.type === "selection") {
+        if (!isSelectionInfo(message.payload)) {
+          latestSelectionRef.current = null;
+          pendingSelectionTextRef.current = null;
+          return;
+        }
+
+        latestSelectionRef.current = message.payload;
+
+        if (
+          pendingSelectionTextRef.current &&
+          normalizeSelectedText(message.payload.text) ===
+            pendingSelectionTextRef.current
+        ) {
+          pendingSelectionTextRef.current = null;
+          openDraftFromSelection(message.payload);
+          return;
+        }
+
+        pendingSelectionTextRef.current = null;
+        return;
+      }
+
+      if (message?.type === "highlight-press" && isHighlight(message.payload)) {
+        openDraftFromHighlight(message.payload);
+      }
+    };
+
+    return (
+      <WebView
+        ref={webViewRef}
+        source={{ html: webViewHtml }}
+        style={{
+          flex: 1,
+          backgroundColor: "transparent",
+        }}
+        onLoadEnd={() => setIsLoading(false)}
+        onMessage={handleWebViewMessage}
+        onCustomMenuSelection={handleCustomMenuSelection}
+        onShouldStartLoadWithRequest={(request) => {
+          if (
+            request.url === "about:blank" ||
+            request.url.startsWith("data:")
+          ) {
+            return true;
+          }
+          Linking.openURL(request.url);
+          return false;
+        }}
+        javaScriptEnabled
+        menuItems={
+          disableHighlightMenu ? NON_HIGHLIGHT_MENU_ITEMS : DEFAULT_MENU_ITEMS
+        }
+        originWhitelist={["*"]}
+      />
+    );
+  }
+);
 
 export default ReadableFormat;

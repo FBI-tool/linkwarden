@@ -19,7 +19,11 @@ import {
   useRouter,
 } from "expo-router";
 import { useUser } from "@linkwarden/router/user";
-import { useDeleteLink, useGetLink, useUpdateLink } from "@linkwarden/router/links";
+import {
+  useDeleteLink,
+  useGetLink,
+  useUpdateLink,
+} from "@linkwarden/router/links";
 import useTmpStore from "@/store/tmp";
 import {
   ArchivedFormat,
@@ -98,7 +102,7 @@ export default function LinkScreen() {
     useCallback(() => {
       if (!linkId) return;
 
-      void Promise.all([
+      Promise.all([
         refetchLink(),
         queryClient.invalidateQueries({
           queryKey: ["highlights", linkId],
@@ -154,7 +158,7 @@ export default function LinkScreen() {
         {isReadableFormat ? (
           <TouchableOpacity
             onPress={() => {
-              void handleOpenHighlights();
+              handleOpenHighlights();
             }}
           >
             <Highlighter size={21} color={theme["base-content"]} />
@@ -209,10 +213,12 @@ export default function LinkScreen() {
               <DropdownMenu.Item
                 key="display-settings"
                 onSelect={() => {
-                  void SheetManager.show("reader-settings-sheet");
+                  SheetManager.show("reader-settings-sheet");
                 }}
               >
-                <DropdownMenu.ItemTitle>Display Settings</DropdownMenu.ItemTitle>
+                <DropdownMenu.ItemTitle>
+                  Display Settings
+                </DropdownMenu.ItemTitle>
               </DropdownMenu.Item>
             )}
 
@@ -220,7 +226,7 @@ export default function LinkScreen() {
               <DropdownMenu.Item
                 key="edit-link"
                 onSelect={() => {
-                  void SheetManager.show("edit-link-sheet", {
+                  SheetManager.show("edit-link-sheet", {
                     payload: {
                       link: tmp.link as LinkIncludingShortenedCollectionAndTags,
                     },

@@ -13,9 +13,15 @@ import ReadableHighlightSheet, {
 } from "./ReadableHighlightSheet";
 import ReadableHighlightsSheet from "./ReadableHighlightsSheet";
 import ReaderSettingsSheet from "./ReaderSettingsSheet";
+import LoginSheet from "./LoginSheet";
+import SignUpSheet from "./SignUpSheet";
+import SelfHostedServerSheet from "./SelfHostedServerSheet";
 import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
 
 registerSheet("support-sheet", SupportSheet);
+registerSheet("login-sheet", LoginSheet);
+registerSheet("sign-up-sheet", SignUpSheet);
+registerSheet("self-hosted-server-sheet", SelfHostedServerSheet);
 registerSheet("add-link-sheet", AddLinkSheet);
 registerSheet("link-details-sheet", LinkDetailsSheet);
 registerSheet("edit-link-sheet", EditLinkSheet);
@@ -27,6 +33,9 @@ registerSheet("reader-settings-sheet", ReaderSettingsSheet);
 declare module "react-native-actions-sheet" {
   interface Sheets {
     "support-sheet": SheetDefinition;
+    "login-sheet": SheetDefinition;
+    "sign-up-sheet": SheetDefinition;
+    "self-hosted-server-sheet": SheetDefinition;
     "add-link-sheet": SheetDefinition;
     "link-details-sheet": SheetDefinition<{
       payload: {

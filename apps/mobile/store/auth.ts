@@ -52,6 +52,7 @@ type AuthStore = {
     email: string,
     instance: string
   ) => Promise<boolean>;
+  setInstance: (instance: string) => Promise<void>;
   signOut: () => Promise<void>;
   setAuth: () => Promise<void>;
 };
@@ -146,6 +147,15 @@ const useAuthStore = create<AuthStore>((set) => ({
     }
   },
   requestVerificationEmail,
+  setInstance: async (instance) => {
+    await SecureStore.setItemAsync("INSTANCE", instance);
+    set((state) => ({
+      auth: {
+        ...state.auth,
+        instance,
+      },
+    }));
+  },
   signUp: async ({ name, username, email, password, instance }) => {
     try {
       const res = await Promise.race([
@@ -401,8 +411,9 @@ const useAuthStore = create<AuthStore>((set) => ({
     }
   },
   signOut: async () => {
+    const instance = await SecureStore.getItemAsync("INSTANCE");
+
     await SecureStore.deleteItemAsync("TOKEN");
-    await SecureStore.deleteItemAsync("INSTANCE");
 
     queryClient.cancelQueries();
     queryClient.clear();
@@ -415,7 +426,7 @@ const useAuthStore = create<AuthStore>((set) => ({
 
     set({
       auth: {
-        instance: "",
+        instance: instance || cloudInstance,
         session: null,
         status: "unauthenticated",
       },

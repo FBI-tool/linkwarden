@@ -111,151 +111,131 @@ export default function HomeScreen() {
   return (
     <>
       <Animated.View entering={FadeIn} className="flex-col justify-end h-full">
-        <View className="h-full bg-primary relative">
-          <SafeAreaView edges={["top"]} className="absolute top-0 right-0 z-10">
-            <TouchableOpacity
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Need help?"
-              className="mr-4 mt-2 items-center justify-center rounded-full"
-              onPress={() => SheetManager.show("support-sheet")}
-            >
-              <CircleHelp size={25} color={theme["base-100"]} />
-            </TouchableOpacity>
-          </SafeAreaView>
+        <View className="h-full bg-sky-50 dark:bg-sky-950">
+          <SafeAreaView className="flex-col justify-between h-full duration-100 pt-10 -mt-2 w-full px-4">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center justify-center gap-4">
+                <Image
+                  source={require("@/assets/images/linkwarden.png")}
+                  className="w-[40px] h-[40px]"
+                />
+                <Text className="text-base-content text-3xl font-semibold">
+                  Linkwarden
+                </Text>
+              </View>
 
-          <View className="my-auto">
-            <Image
-              source={require("@/assets/images/linkwarden.png")}
-              className="w-[120px] h-[120px] mx-auto"
-            />
-            <Text className="text-base-100 text-4xl font-semibold mt-7 mx-auto">
-              Linkwarden
-            </Text>
-          </View>
-          <View>
-            <Text className="text-base-100 text-xl text-center font-semibold mx-4 mt-3">
-              Welcome to the official mobile app for Linkwarden!
-            </Text>
-
-            <Text className="text-base-100 text-xl text-center mx-4 mt-3">
-              Expect regular improvements and new features as we continue
-              refining the experience.
-            </Text>
-          </View>
-          <Svg
-            viewBox="0 0 1440 320"
-            width={Dimensions.get("screen").width}
-            height={Dimensions.get("screen").width * (320 / 1440) + 2}
-          >
-            <Path
-              fill={rawTheme[colorScheme as ThemeName]["base-100"]}
-              fillOpacity={1}
-              d="M0,256L48,234.7C96,213,192,171,288,176C384,181,480,235,576,266.7C672,299,768,309,864,277.3C960,245,1056,171,1152,122.7C1248,75,1344,53,1392,42.7L1440,32L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-            />
-          </Svg>
-          <SafeAreaView
-            edges={["bottom"]}
-            className="flex-col justify-end h-auto duration-100 pt-10 bg-base-100 -mt-2 pb-10 gap-4 w-full px-4"
-          >
-            <View className="flex-row gap-3">
-              <Button
-                variant="accent"
-                size="lg"
-                className="flex-1 px-4"
-                onPress={openSignUpSheet}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Need help?"
+                className="items-center justify-center rounded-full"
+                onPress={() => SheetManager.show("support-sheet")}
               >
-                <Text className="text-white text-xl">Sign Up</Text>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="flex-1 px-4"
-                onPress={openLoginSheet}
-              >
-                <Text className="text-base-content text-xl">Login</Text>
-              </Button>
+                <CircleHelp size={25} color={theme["base-content"]} />
+              </TouchableOpacity>
             </View>
 
-            {(appleEnabled || googleEnabled) && (
-              <View className="flex-row items-center justify-between gap-3">
-                <View className="flex-1 flex-col">
-                  <Text className="text-neutral">Or continue using</Text>
-                  <Text className="font-bold text-base-content">
-                    {ssoProviderText}
-                  </Text>
-                </View>
-                <View className="flex-row justify-end gap-3">
-                  {appleEnabled && (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Continue with Apple"
-                      className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
-                      disabled={isCheckingOAuth}
-                      onPress={() => {
-                        if (isCheckingOAuth) return;
-                        signInWithApple(instance);
-                      }}
-                    >
-                      <FontAwesome
-                        name="apple"
-                        size={22}
-                        color={theme["base-content"]}
-                      />
-                    </TouchableOpacity>
-                  )}
-                  {googleEnabled && (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Continue with Google"
-                      className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
-                      disabled={isCheckingOAuth}
-                      onPress={() => {
-                        if (isCheckingOAuth) return;
-                        signInWithGoogle(instance);
-                      }}
-                    >
-                      <FontAwesome
-                        name="google"
-                        size={20}
-                        color={theme["base-content"]}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
+            <View className="flex-col gap-4">
+              <View className="flex-row gap-3">
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="flex-1 px-4"
+                  onPress={openSignUpSheet}
+                >
+                  <Text className="text-white text-xl">Sign Up</Text>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="flex-1 px-4 bg-base-100"
+                  onPress={openLoginSheet}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-base-content text-xl">Login</Text>
+                </Button>
               </View>
-            )}
 
-            <View className="flex-row items-center justify-center gap-1">
-              <Text className="text-neutral text-xs">Server:</Text>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Server: ${serverName}`}
-                    className="flex-row items-center justify-center gap-1"
-                  >
-                    <Text className="text-primary text-xs">{serverName}</Text>
-                    <ChevronDown size={12} color={theme["primary"]} />
-                  </TouchableOpacity>
-                </DropdownMenu.Trigger>
+              {(appleEnabled || googleEnabled) && (
+                <View className="flex-row items-center justify-between gap-3">
+                  <View className="flex-1 flex-col">
+                    <Text className="text-neutral">Or continue using</Text>
+                    <Text className="font-bold text-base-content">
+                      {ssoProviderText}
+                    </Text>
+                  </View>
+                  <View className="flex-row justify-end gap-3">
+                    {appleEnabled && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Continue with Apple"
+                        className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
+                        disabled={isCheckingOAuth}
+                        onPress={() => {
+                          if (isCheckingOAuth) return;
+                          signInWithApple(instance);
+                        }}
+                      >
+                        <FontAwesome
+                          name="apple"
+                          size={22}
+                          color={theme["base-content"]}
+                        />
+                      </TouchableOpacity>
+                    )}
+                    {googleEnabled && (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Continue with Google"
+                        className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
+                        disabled={isCheckingOAuth}
+                        onPress={() => {
+                          if (isCheckingOAuth) return;
+                          signInWithGoogle(instance);
+                        }}
+                      >
+                        <FontAwesome
+                          name="google"
+                          size={20}
+                          color={theme["base-content"]}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
 
-                <DropdownMenu.Content>
-                  <DropdownMenu.Separator />
-                  {orderedServerOptions.map((option) => (
-                    <DropdownMenu.Item
-                      key={option.key}
-                      onSelect={option.onSelect}
-                      className={option.className}
+              <View className="flex-row items-center justify-center gap-1 mt-5">
+                <Text className="text-neutral text-xs">Hosted on:</Text>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Server: ${serverName}`}
+                      className="flex-row items-center justify-center gap-1"
                     >
-                      {option.title}
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
+                      <Text className="text-primary text-xs">{serverName}</Text>
+                      <ChevronDown size={12} color={theme["primary"]} />
+                    </TouchableOpacity>
+                  </DropdownMenu.Trigger>
+
+                  <DropdownMenu.Content>
+                    <DropdownMenu.Separator />
+                    {orderedServerOptions.map((option) => (
+                      <DropdownMenu.Item
+                        key={option.key}
+                        onSelect={option.onSelect}
+                        className={option.className}
+                      >
+                        {option.title}
+                      </DropdownMenu.Item>
+                    ))}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              </View>
             </View>
           </SafeAreaView>
         </View>

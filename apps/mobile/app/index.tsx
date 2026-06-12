@@ -103,28 +103,31 @@ export default function HomeScreen() {
   return (
     <>
       <Animated.View entering={FadeIn} className="flex-col justify-end h-full">
-        <View className="h-full bg-indigo-50 dark:bg-indigo-950">
+        <View className="h-full bg-zinc-100 dark:bg-zinc-900">
           <SafeAreaView className="flex-col justify-between h-full duration-100 pt-10 -mt-2 w-full px-4">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center justify-center gap-4">
-                <Image
-                  source={require("@/assets/images/linkwarden.png")}
-                  className="w-[40px] h-[40px]"
-                />
-                <Text className="text-base-content text-3xl font-semibold">
-                  Linkwarden
-                </Text>
+            <View className="flex-col gap-2">
+              <View className="flex-row items-center justify-end">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Need help?"
+                  className="items-center justify-center rounded-full"
+                  onPress={() => SheetManager.show("support-sheet")}
+                >
+                  <CircleHelp size={25} color={theme["base-content"]} />
+                </TouchableOpacity>
               </View>
+            </View>
 
-              <TouchableOpacity
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Need help?"
-                className="items-center justify-center rounded-full"
-                onPress={() => SheetManager.show("support-sheet")}
-              >
-                <CircleHelp size={25} color={theme["base-content"]} />
-              </TouchableOpacity>
+            <View className="flex-col gap-4">
+              <Image
+                source={require("@/assets/images/linkwarden.png")}
+                className="w-[100px] h-[100px] mx-auto"
+              />
+
+              <Text className="text-base-content text-3xl font-semibold text-center">
+                Bookmarks, Evolved
+              </Text>
             </View>
 
             <View className="flex-col gap-4">

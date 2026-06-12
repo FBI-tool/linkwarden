@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import * as AppleAuthentication from "expo-apple-authentication";
 import {
   GoogleSignin,
+  isCancelledResponse,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
@@ -479,6 +480,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       await GoogleSignin.hasPlayServices();
       await GoogleSignin.signOut();
       const response = await GoogleSignin.signIn();
+      if (isCancelledResponse(response)) return;
       idToken = response.data?.idToken ?? null;
       displayName = response.data?.user?.name ?? "";
     } catch (err: any) {
@@ -494,8 +496,6 @@ const useAuthStore = create<AuthStore>((set, get) => ({
           err?.message ?? ""
         }`
       );
-
-      Alert.alert("Error", "Could not sign in with Google.");
       return;
     }
 

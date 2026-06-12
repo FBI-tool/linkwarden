@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const theme = rawTheme[colorScheme as ThemeName];
   const serverName = displayInstance(auth.instance);
   const instance = (auth.instance || cloudInstance).trim().replace(/\/+$/, "");
+  const isCloudInstance = instance === cloudInstance;
   const currentInstanceInfo =
     instanceInfo.instance === instance ? instanceInfo : null;
   const buttonAuths = currentInstanceInfo?.logins?.buttonAuths;
@@ -239,15 +240,25 @@ export default function HomeScreen() {
 
                   <DropdownMenu.Content>
                     <DropdownMenu.Separator />
-                    {orderedServerOptions.map((option) => (
-                      <DropdownMenu.Item
-                        key={option.key}
-                        onSelect={option.onSelect}
-                        className={option.className}
-                      >
-                        {option.title}
-                      </DropdownMenu.Item>
-                    ))}
+                    {orderedServerOptions.map((option) => {
+                      const isActive =
+                        option.key === "cloud"
+                          ? isCloudInstance
+                          : !isCloudInstance;
+
+                      return (
+                        <DropdownMenu.CheckboxItem
+                          key={option.key}
+                          value={isActive}
+                          onValueChange={option.onSelect}
+                          className={option.className}
+                        >
+                          <DropdownMenu.ItemTitle>
+                            {option.title}
+                          </DropdownMenu.ItemTitle>
+                        </DropdownMenu.CheckboxItem>
+                      );
+                    })}
                   </DropdownMenu.Content>
                 </DropdownMenu.Root>
               </View>

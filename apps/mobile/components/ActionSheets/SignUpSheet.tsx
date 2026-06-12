@@ -278,25 +278,6 @@ export default function SignUpSheet() {
             >
               <Text className="text-white text-xl">Sign Up</Text>
             </Button>
-            <Text className="text-neutral text-center text-xs px-2">
-              By signing up, you agree to our{" "}
-              <Text
-                className="font-semibold"
-                onPress={() => Linking.openURL("https://linkwarden.app/tos")}
-              >
-                Terms of Service
-              </Text>{" "}
-              and{" "}
-              <Text
-                className="font-semibold"
-                onPress={() =>
-                  Linking.openURL("https://linkwarden.app/privacy-policy")
-                }
-              >
-                Privacy Policy
-              </Text>
-              .
-            </Text>
           </>
         )}
       </ScrollView>

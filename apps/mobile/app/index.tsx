@@ -8,15 +8,14 @@ import { ChevronDown, CircleHelp } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { useEffect } from "react";
 import {
-  Dimensions,
   Image,
+  Linking,
   Platform,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SheetManager } from "react-native-actions-sheet";
-import Svg, { Path } from "react-native-svg";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardToolbar } from "react-native-keyboard-controller";
@@ -93,13 +92,6 @@ export default function HomeScreen() {
   ];
   const orderedServerOptions =
     Platform.OS === "ios" ? [...serverOptions].reverse() : serverOptions;
-  const ssoProviderText =
-    appleEnabled && googleEnabled
-      ? "Apple or Google"
-      : appleEnabled
-        ? "Apple"
-        : "Google";
-
   useEffect(() => {
     fetchInstanceInfo(instance);
   }, [fetchInstanceInfo, instance]);
@@ -111,7 +103,7 @@ export default function HomeScreen() {
   return (
     <>
       <Animated.View entering={FadeIn} className="flex-col justify-end h-full">
-        <View className="h-full bg-sky-50 dark:bg-sky-950">
+        <View className="h-full bg-indigo-50 dark:bg-indigo-950">
           <SafeAreaView className="flex-col justify-between h-full duration-100 pt-10 -mt-2 w-full px-4">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center justify-center gap-4">
@@ -157,55 +149,75 @@ export default function HomeScreen() {
               </View>
 
               {(appleEnabled || googleEnabled) && (
-                <View className="flex-row items-center justify-between gap-3">
-                  <View className="flex-1 flex-col">
-                    <Text className="text-neutral">Or continue using</Text>
-                    <Text className="font-bold text-base-content">
-                      {ssoProviderText}
-                    </Text>
-                  </View>
-                  <View className="flex-row justify-end gap-3">
-                    {appleEnabled && (
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel="Continue with Apple"
-                        className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
-                        disabled={isCheckingOAuth}
-                        onPress={() => {
-                          if (isCheckingOAuth) return;
-                          signInWithApple(instance);
-                        }}
-                      >
-                        <FontAwesome
-                          name="apple"
-                          size={22}
-                          color={theme["base-content"]}
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {googleEnabled && (
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel="Continue with Google"
-                        className="h-12 w-12 items-center justify-center rounded-lg border border-base-content bg-base-100"
-                        disabled={isCheckingOAuth}
-                        onPress={() => {
-                          if (isCheckingOAuth) return;
-                          signInWithGoogle(instance);
-                        }}
-                      >
-                        <FontAwesome
-                          name="google"
-                          size={20}
-                          color={theme["base-content"]}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                <View className="flex-col gap-3">
+                  {appleEnabled && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      accessibilityRole="button"
+                      accessibilityLabel="Continue with Apple"
+                      className="w-full flex-row gap-2 bg-base-100 px-4"
+                      disabled={isCheckingOAuth}
+                      onPress={() => {
+                        if (isCheckingOAuth) return;
+                        signInWithApple(instance);
+                      }}
+                    >
+                      <FontAwesome
+                        name="apple"
+                        size={22}
+                        color={theme["base-content"]}
+                      />
+                      <Text className="text-base-content text-base font-semibold">
+                        Continue with Apple
+                      </Text>
+                    </Button>
+                  )}
+                  {googleEnabled && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      accessibilityRole="button"
+                      accessibilityLabel="Continue with Google"
+                      className="w-full flex-row gap-2 bg-base-100 px-4"
+                      disabled={isCheckingOAuth}
+                      onPress={() => {
+                        if (isCheckingOAuth) return;
+                        signInWithGoogle(instance);
+                      }}
+                    >
+                      <FontAwesome
+                        name="google"
+                        size={20}
+                        color={theme["base-content"]}
+                      />
+                      <Text className="text-base-content text-base font-semibold">
+                        Continue with Google
+                      </Text>
+                    </Button>
+                  )}
                 </View>
               )}
+
+              <Text className="text-neutral text-center text-xs px-2">
+                By continuing, you agree to our{" "}
+                <Text
+                  className="font-semibold"
+                  onPress={() => Linking.openURL("https://linkwarden.app/tos")}
+                >
+                  Terms of Service
+                </Text>{" "}
+                and{" "}
+                <Text
+                  className="font-semibold"
+                  onPress={() =>
+                    Linking.openURL("https://linkwarden.app/privacy-policy")
+                  }
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
 
               <View className="flex-row items-center justify-center gap-1 mt-5">
                 <Text className="text-neutral text-xs">Hosted on:</Text>
@@ -214,7 +226,7 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={`Server: ${serverName}`}
+                      accessibilityLabel={`Hosted on: ${serverName}`}
                       className="flex-row items-center justify-center gap-1"
                     >
                       <Text className="text-primary text-xs">{serverName}</Text>

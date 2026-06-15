@@ -1,7 +1,7 @@
 import { prisma } from "@linkwarden/prisma";
 import { Subscription, User } from "@linkwarden/prisma/client";
 import checkStripeSubscriptionByEmail from "./checkStripeSubscriptionByEmail";
-import checkRevenuecatSubscription from "./checkRevenuecatSubscription";
+import syncRevenuecatSubscription from "./syncRevenuecatSubscription";
 
 interface UserIncludingSubscription extends User {
   subscriptions: Subscription | null;
@@ -21,23 +21,15 @@ export default async function verifySubscription(
     (1 + Number(TRIAL_PERIOD_DAYS)) * 86400000; // Add 1 to account for the current day
 
   const daysLeft = Math.floor((trialEndTime - Date.now()) / 86400000);
+  const subscriptionRequired = REQUIRE_CC || daysLeft <= 0;
 
-  if (
-    !user.subscriptions &&
-    !user.parentSubscription &&
-    (REQUIRE_CC || daysLeft <= 0)
-  ) {
-    return null;
-  }
-
-  if (user.parentSubscription?.active) {
+  if (user.parentSubscription?.active || !subscriptionRequired) {
     return user;
   }
 
   if (
-    (!user.subscriptions?.active ||
-      new Date() > user.subscriptions.currentPeriodEnd) &&
-    (REQUIRE_CC || daysLeft <= 0)
+    !user.subscriptions?.active ||
+    new Date() > user.subscriptions.currentPeriodEnd
   ) {
     if (user.subscriptions?.provider === "STRIPE") {
       const subscription = await checkStripeSubscriptionByEmail(
@@ -87,52 +79,16 @@ export default async function verifySubscription(
         })
         .catch((err) => console.log(err));
     } else {
-      // REVENUECAT
-      const subscription = await checkRevenuecatSubscription(user.uuid);
+      const subscription = await syncRevenuecatSubscription(user).catch(
+        (err) => {
+          console.log(err);
+          return null;
+        }
+      );
 
-      if (
-        !subscription ||
-        !subscription.currentPeriodEnd ||
-        !subscription.revenueCatSubscriptionId ||
-        !subscription.currentPeriodStart
-      ) {
-        if (user.subscriptions?.active)
-          await prisma.subscription.update({
-            where: {
-              revenueCatAppUserId: user.uuid,
-            },
-            data: { active: false },
-          });
-
+      if (!subscription?.active) {
         return null;
       }
-
-      const { active, currentPeriodStart, currentPeriodEnd } = subscription;
-
-      await prisma.subscription
-        .upsert({
-          where: {
-            userId: user.id,
-          },
-          create: {
-            active,
-            provider: "REVENUECAT",
-            revenueCatAppUserId: user.uuid,
-            currentPeriodStart,
-            currentPeriodEnd,
-            quantity: 1,
-            userId: user.id,
-          },
-          update: {
-            active,
-            provider: "REVENUECAT",
-            revenueCatAppUserId: user.uuid,
-            currentPeriodStart,
-            currentPeriodEnd,
-            quantity: 1,
-          },
-        })
-        .catch((err) => console.log(err));
     }
   }
 

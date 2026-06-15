@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { rawTheme, ThemeName } from "@/lib/colors";
+import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
 import useAuthStore from "@/store/auth";
 import { isAtLeastInstanceVersion } from "@linkwarden/router/config";
 import { FontAwesome } from "@expo/vector-icons";
@@ -60,11 +61,15 @@ export default function HomeScreen() {
   const isCheckingOAuth =
     currentInstanceInfo?.status === "loading" && !buttonAuths;
 
-  const openLoginSheet = () => {
+  const openLoginSheet = async () => {
+    if (!(await ensureCloudIsReachable(instance))) return;
+
     SheetManager.show("login-sheet");
   };
 
-  const openSignUpSheet = () => {
+  const openSignUpSheet = async () => {
+    if (!(await ensureCloudIsReachable(instance))) return;
+
     SheetManager.show("sign-up-sheet");
   };
 
@@ -162,8 +167,9 @@ export default function HomeScreen() {
                       accessibilityLabel="Continue with Apple"
                       className="w-full flex-row gap-2 bg-base-100 px-4"
                       disabled={isCheckingOAuth}
-                      onPress={() => {
+                      onPress={async () => {
                         if (isCheckingOAuth) return;
+                        if (!(await ensureCloudIsReachable(instance))) return;
                         signInWithApple(instance);
                       }}
                     >
@@ -185,8 +191,9 @@ export default function HomeScreen() {
                       accessibilityLabel="Continue with Google"
                       className="w-full flex-row gap-2 bg-base-100 px-4"
                       disabled={isCheckingOAuth}
-                      onPress={() => {
+                      onPress={async () => {
                         if (isCheckingOAuth) return;
+                        if (!(await ensureCloudIsReachable(instance))) return;
                         signInWithGoogle(instance);
                       }}
                     >

@@ -4,6 +4,7 @@ import {
   hasInactiveSubscription,
   shouldRouteToSubscribe,
 } from "@/lib/subscription";
+import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
 import useAuthStore from "@/store/auth";
 import { useConfig } from "@linkwarden/router/config";
 import { useUser } from "@linkwarden/router/user";
@@ -236,6 +237,9 @@ export default function SubscribeScreen() {
     setPurchaseLoading(true);
 
     try {
+      const serverReachable = await ensureCloudIsReachable(auth.instance);
+      if (!serverReachable) return;
+
       await Purchases.logIn(user.uuid);
       if (user.email) await Purchases.setEmail(user.email);
       await Purchases.invalidateCustomerInfoCache();

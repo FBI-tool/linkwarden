@@ -16,6 +16,7 @@ import { clearCache } from "@/lib/cache";
 import useDataStore from "@/store/data";
 import { useOfflineSyncStore } from "@/lib/offlineSync";
 import { hasInactiveSubscription } from "@/lib/subscription";
+import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
 
 const cloudInstance = "https://cloud.linkwarden.app";
 const cloudConfig: Config = {
@@ -289,6 +290,8 @@ const useAuthStore = create<AuthStore>((set, get) => ({
     instance,
     acceptPromotionalEmails = false,
   }) => {
+    if (!(await ensureCloudIsReachable(instance))) return false;
+
     try {
       const res = await Promise.race([
         fetch(`${instance}/api/v1/users`, {
@@ -325,6 +328,8 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   signIn: async (username, password, instance, token) => {
     if (process.env.EXPO_PUBLIC_SHOW_LOGS === "true")
       console.log("Signing into", instance);
+
+    if (!(await ensureCloudIsReachable(instance))) return;
 
     if (token) {
       try {
@@ -411,6 +416,8 @@ const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
   signInWithApple: async (instance) => {
+    if (!(await ensureCloudIsReachable(instance))) return;
+
     let credential: AppleAuthentication.AppleAuthenticationCredential;
     try {
       credential = await AppleAuthentication.signInAsync({
@@ -473,6 +480,8 @@ const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
   signInWithGoogle: async (instance) => {
+    if (!(await ensureCloudIsReachable(instance))) return;
+
     let idToken: string | null = null;
     let displayName = "";
 

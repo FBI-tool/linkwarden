@@ -173,7 +173,7 @@ export default function SubscribeScreen() {
         : null,
       trialText: selectedProduct
         ? freeTrialPeriod
-          ? `Start with a ${freeTrialPeriod} free trial, cancel anytime.`
+          ? `Get ${freeTrialPeriod} free when you start. Cancel anytime.`
           : "Subscribe to continue."
         : null,
     };

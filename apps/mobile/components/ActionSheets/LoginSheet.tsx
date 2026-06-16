@@ -61,10 +61,10 @@ export default function LoginSheet() {
     if (!instance || (!form.token && (!form.user || !form.password))) return;
 
     setIsLoading(true);
-    await signIn(form.user, form.password, instance, form.token);
+    const success = await signIn(form.user, form.password, instance, form.token);
     setIsLoading(false);
 
-    closeSheet();
+    if (success) closeSheet();
   };
 
   return (

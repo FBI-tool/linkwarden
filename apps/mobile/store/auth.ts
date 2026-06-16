@@ -75,7 +75,7 @@ type AuthStore = {
     password: string,
     instance: string,
     token?: string
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   signInWithApple: (instance: string) => Promise<void>;
   signInWithGoogle: (instance: string) => Promise<void>;
   signUp: (form: SignUpForm) => Promise<boolean>;
@@ -329,7 +329,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
     if (process.env.EXPO_PUBLIC_SHOW_LOGS === "true")
       console.log("Signing into", instance);
 
-    if (!(await ensureCloudIsReachable(instance))) return;
+    if (!(await ensureCloudIsReachable(instance))) return false;
 
     if (token) {
       try {
@@ -359,8 +359,10 @@ const useAuthStore = create<AuthStore>((set, get) => ({
             },
           });
           router.replace(route);
+          return true;
         } else {
           Alert.alert("Error", "Invalid token");
+          return false;
         }
       } catch (err: any) {
         if (err?.message === "TIMEOUT") {
@@ -374,6 +376,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
             "Could not connect to the server. Please check your network configuration and try again."
           );
         }
+        return false;
       }
     } else {
       try {
@@ -397,8 +400,10 @@ const useAuthStore = create<AuthStore>((set, get) => ({
           await SecureStore.setItemAsync("INSTANCE", instance);
           set({ auth: { session, instance, status: "authenticated" } });
           router.replace(route);
+          return true;
         } else {
           Alert.alert("Error", "Invalid credentials");
+          return false;
         }
       } catch (err: any) {
         if (err?.message === "TIMEOUT") {
@@ -412,6 +417,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
             "Could not connect to the server. Please check your network configuration and try again."
           );
         }
+        return false;
       }
     }
   },

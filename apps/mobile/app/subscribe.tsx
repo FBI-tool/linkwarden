@@ -11,25 +11,44 @@ import { useUser } from "@linkwarden/router/user";
 import { Plan } from "@linkwarden/types/global";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
+import {
+  Archive,
+  Bookmark,
+  BookOpen,
+  Check,
+  CircleHelp,
+  Search,
+  Sparkles,
+} from "lucide-react-native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
+  Linking,
   Platform,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import { SheetManager } from "react-native-actions-sheet";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-const screenWidth = Dimensions.get("screen").width;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const features = [
+  { title: "Save & organize", icon: Bookmark },
+  { title: "Permanent archives", icon: Archive },
+  { title: "Reader view & highlights", icon: BookOpen },
+  { title: "Full-text search", icon: Search },
+  { title: "And more...", icon: Sparkles },
+];
 
 const paymentButton = Platform.select({
   ios: {
@@ -91,6 +110,11 @@ const getFreeTrialPeriod = (product?: PurchasesPackage["product"]) => {
 export default function SubscribeScreen() {
   const { auth, signOut } = useAuthStore();
   const { colorScheme } = useColorScheme();
+  const theme = rawTheme[colorScheme as ThemeName];
+  const accentColor = colorScheme === "dark" ? "#A78BFA" : theme.accent;
+  const insets = useSafeAreaInsets();
+  const payButtonClass = colorScheme === "dark" ? "bg-white" : "bg-black";
+  const payContentColor = colorScheme === "dark" ? "#000000" : "#FFFFFF";
   const [plan, setPlan] = useState<Plan>(Plan.yearly);
   const {
     data: user,
@@ -147,42 +171,63 @@ export default function SubscribeScreen() {
     };
   }, []);
 
+  const planCards = useMemo(
+    () => [
+      {
+        key: Plan.yearly,
+        label: "Yearly",
+        package: revenueCatPackages.yearly,
+        price: revenueCatPackages.yearly?.product?.priceString ?? null,
+        suffix: "/yr",
+        caption: revenueCatPackages.yearly?.product?.pricePerMonthString
+          ? `Only ${revenueCatPackages.yearly.product.pricePerMonthString}/mo`
+          : null,
+      },
+      {
+        key: Plan.monthly,
+        label: "Monthly",
+        package: revenueCatPackages.monthly,
+        price: revenueCatPackages.monthly?.product?.priceString ?? null,
+        suffix: "/mo",
+        caption: revenueCatPackages.monthly?.product?.priceString
+          ? `Billed at ${revenueCatPackages.monthly.product.priceString}/mo.`
+          : null,
+      },
+    ],
+    [revenueCatPackages.monthly, revenueCatPackages.yearly]
+  );
+
+  const savingsPercent = useMemo(() => {
+    const monthlyPrice = revenueCatPackages.monthly?.product?.price;
+    const yearlyPrice = revenueCatPackages.yearly?.product?.price;
+    if (!monthlyPrice || !yearlyPrice) return null;
+    const percent = Math.round((1 - yearlyPrice / (monthlyPrice * 12)) * 100);
+    return percent > 0 ? percent : null;
+  }, [revenueCatPackages.monthly, revenueCatPackages.yearly]);
+
   const selectedPlan = useMemo(() => {
-    const isMonthly = plan === Plan.monthly;
-    const selectedPackage = isMonthly
-      ? revenueCatPackages.monthly
-      : revenueCatPackages.yearly;
-    const selectedProduct = selectedPackage?.product;
-    const totalPrice = selectedProduct?.priceString;
-    const monthlyPrice = isMonthly
-      ? totalPrice
-      : selectedProduct?.pricePerMonthString;
-    const freeTrialPeriod = getFreeTrialPeriod(selectedProduct);
+    const selectedPackage =
+      plan === Plan.monthly
+        ? revenueCatPackages.monthly
+        : revenueCatPackages.yearly;
+    const product = selectedPackage?.product;
+    const total = product?.priceString;
+    const period = plan === Plan.monthly ? "month" : "year";
+    const freeTrialPeriod = getFreeTrialPeriod(product);
 
     return {
       package: selectedPackage ?? null,
-      price: monthlyPrice ?? null,
-      billed: isMonthly ? "Billed monthly" : "Billed yearly",
-      total: totalPrice
+      footnote: total
         ? freeTrialPeriod
-          ? `After ${freeTrialPeriod}: ${
-              isMonthly ? `${totalPrice} per month` : `${totalPrice} per year`
-            }.`
-          : `${
-              isMonthly ? `${totalPrice} per month` : `${totalPrice} per year`
-            }.`
-        : null,
-      trialText: selectedProduct
-        ? freeTrialPeriod
-          ? `Get ${freeTrialPeriod} free when you start. Cancel anytime.`
-          : "Subscribe to continue."
+          ? `Get ${freeTrialPeriod} free, then ${total} per ${period}. Cancel anytime from your device settings.`
+          : `${total} per ${period}. Cancel anytime from your device settings.`
         : null,
     };
   }, [plan, revenueCatPackages.monthly, revenueCatPackages.yearly]);
 
   if (isChecking || auth.status !== "authenticated" || !showSubscribe) {
     return (
-      <View className="flex-1 items-center justify-center bg-base-100">
+      <View className="flex-1 items-center justify-center bg-zinc-100 dark:bg-zinc-900">
         <ActivityIndicator size="large" />
       </View>
     );
@@ -263,169 +308,209 @@ export default function SubscribeScreen() {
     }
   };
 
+  const close = () => {
+    if (isForcedSubscribe) {
+      signOut();
+    } else {
+      router.replace("/(tabs)/dashboard");
+    }
+  };
+
   return (
-    <ScrollView
-      className="bg-primary"
-      contentContainerStyle={{ flexGrow: 1 }}
-      bounces={false}
-    >
-      <View className="flex-1 justify-end bg-primary">
-        <SafeAreaView edges={["top"]} className="flex-1 justify-center px-8">
+    <View className="flex-1 bg-zinc-100 dark:bg-zinc-900">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingTop: insets.top + 8,
+          paddingBottom: 16,
+        }}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="items-center px-6 pt-2 pb-1">
           <Image
             source={require("@/assets/images/linkwarden.png")}
-            className="w-[104px] h-[104px]"
+            className="w-[60px] h-[60px]"
           />
-          <Text className="text-base-100 text-5xl font-bold mt-8">
-            Subscribe
+          <Text className="text-base-content text-3xl font-bold text-center mt-5">
+            Get Linkwarden Cloud
           </Text>
-          {selectedPlan.trialText ? (
-            <Text className="text-base-100 text-2xl mt-3">
-              {selectedPlan.trialText}
-            </Text>
+          <Text className="text-neutral text-lg text-center mt-2">
+            Collect, read, annotate, and fully preserve what matters, all in one
+            place.
+          </Text>
+        </View>
+
+        <View className="mx-4 mt-6 px-5 py-5 gap-4">
+          {features.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <View key={feature.title} className="flex-row items-center gap-3">
+                <Icon size={20} color={accentColor} strokeWidth={2.5} />
+                <Text className="text-base-content text-lg">
+                  {feature.title}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      <SafeAreaView
+        edges={["bottom"]}
+        className="bg-zinc-100 dark:bg-zinc-900 px-4 pt-5 pb-2"
+      >
+        <View className="flex-row gap-3">
+          {planCards.map((card) => {
+            const isSelected = plan === card.key;
+            const showBadge = card.key === Plan.yearly && savingsPercent;
+
+            return (
+              // The card is rounded (clips overflow), so the badge lives on an
+              // unclipped wrapper and overlaps the card from outside.
+              <View key={card.label} className="flex-1">
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setPlan(card.key)}
+                  className="rounded-2xl border-2 bg-base-100 p-4"
+                  style={{
+                    borderColor: isSelected
+                      ? accentColor
+                      : theme["neutral-content"],
+                  }}
+                >
+                  <View className="flex-row items-start justify-between">
+                    <Text className="text-base-content text-lg font-bold">
+                      {card.label}
+                    </Text>
+                    {isSelected ? (
+                      <View className="h-6 w-6 items-center justify-center rounded-full bg-accent">
+                        <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                      </View>
+                    ) : (
+                      <View className="h-6 w-6 rounded-full border-2 border-neutral-content" />
+                    )}
+                  </View>
+
+                  {card.price ? (
+                    <Text className="text-base-content text-xl font-bold mt-1">
+                      {card.price}
+                      <Text className="text-neutral text-sm font-normal">
+                        {card.suffix}
+                      </Text>
+                    </Text>
+                  ) : (
+                    <View className="h-6 w-20 rounded-md bg-base-200 mt-1" />
+                  )}
+
+                  {card.caption ? (
+                    <Text className="text-neutral text-xs mt-1">
+                      {card.caption}
+                    </Text>
+                  ) : (
+                    <View className="h-3 w-16 rounded bg-base-200 mt-2" />
+                  )}
+                </TouchableOpacity>
+
+                {showBadge ? (
+                  <View className="absolute -top-3 left-3 rounded-full bg-accent px-2 py-0.5">
+                    <Text className="text-white text-xs font-bold">
+                      {savingsPercent}% OFF
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+
+        <Button
+          variant="ghost"
+          size="lg"
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={paymentButton.accessibilityLabel}
+          className={`w-full flex-row mt-4 px-4 ${payButtonClass}`}
+          disabled={!selectedPlan.package || purchaseLoading || !user?.uuid}
+          onPress={purchase}
+          isLoading={purchaseLoading}
+        >
+          {paymentButton.icon ? (
+            <FontAwesome5
+              brand
+              name={paymentButton.icon}
+              size={paymentButton.iconSize}
+              color={payContentColor}
+            />
           ) : (
-            <View className="h-7 w-4/5 rounded-md bg-base-100/30 mt-3" />
+            <Text
+              className="text-xl font-semibold"
+              style={{ color: payContentColor }}
+            >
+              {paymentButton.label}
+            </Text>
           )}
-        </SafeAreaView>
+        </Button>
 
-        <Svg
-          viewBox="0 0 1440 320"
-          width={screenWidth}
-          height={screenWidth * (320 / 1440) + 2}
-        >
-          <Path
-            fill={rawTheme[colorScheme as ThemeName]["base-100"]}
-            fillOpacity="1"
-            d="M0,256L48,234.7C96,213,192,171,288,176C384,181,480,235,576,266.7C672,299,768,309,864,277.3C960,245,1056,171,1152,122.7C1248,75,1344,53,1392,42.7L1440,32L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-          />
-        </Svg>
-
-        <SafeAreaView
-          edges={["bottom"]}
-          className="bg-base-100 -mt-2 px-4 pt-8 pb-8 gap-5"
-        >
-          <Text className="text-base-content text-base">
-            Subscribe to start using Linkwarden. If you think this is a mistake,
-            contact support@linkwarden.app.
+        {selectedPlan.footnote ? (
+          <Text className="text-neutral text-center text-xs mt-3">
+            {selectedPlan.footnote}
           </Text>
+        ) : null}
+
+        <View className="flex-row items-center justify-center gap-6 mt-3">
           <TouchableOpacity
-            activeOpacity={0.8}
-            className="self-start"
+            activeOpacity={0.7}
             disabled={restoreLoading}
             onPress={restorePurchases}
           >
             {restoreLoading ? (
-              <ActivityIndicator
-                color={rawTheme[colorScheme as ThemeName].primary}
-                size="small"
-              />
+              <ActivityIndicator color={theme.primary} size="small" />
             ) : (
-              <Text className="text-primary font-semibold">
+              <Text className="text-primary text-sm font-semibold">
                 Restore Purchases
               </Text>
             )}
           </TouchableOpacity>
-
-          <View className="bg-base-200 border border-neutral-content rounded-lg p-1 flex-row relative">
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setPlan(Plan.monthly)}
-              className={`flex-1 items-center rounded-md py-2 ${
-                plan === Plan.monthly ? "bg-primary" : ""
-              }`}
-            >
-              <Text
-                className={`text-base font-semibold ${
-                  plan === Plan.monthly ? "text-base-100" : "text-base-content"
-                }`}
-              >
-                Monthly
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setPlan(Plan.yearly)}
-              className={`flex-1 items-center rounded-md py-2 ${
-                plan === Plan.yearly ? "bg-primary" : ""
-              }`}
-            >
-              <Text
-                className={`text-base font-semibold ${
-                  plan === Plan.yearly ? "text-base-100" : "text-base-content"
-                }`}
-              >
-                Yearly
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="items-center gap-1">
-            {selectedPlan.price ? (
-              <Text className="text-base-content text-4xl font-semibold">
-                {selectedPlan.price}
-                <Text className="text-neutral text-base font-normal">/mo</Text>
-              </Text>
-            ) : (
-              <View className="h-10 w-28 rounded-md bg-base-200" />
-            )}
-            <Text className="text-base-content text-base font-semibold">
-              {selectedPlan.billed}
-            </Text>
-          </View>
-
-          <View className="border border-neutral-content rounded-lg p-3">
-            <Text className="text-base-content text-sm font-semibold mb-1">
-              Total
-            </Text>
-            {selectedPlan.total ? (
-              <Text className="text-neutral text-sm">{selectedPlan.total}</Text>
-            ) : (
-              <View className="h-4 w-4/5 rounded bg-base-200" />
-            )}
-          </View>
-
-          <Button
-            variant="ghost"
-            size="lg"
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={paymentButton.accessibilityLabel}
-            className="w-full flex-row bg-black px-4"
-            disabled={!selectedPlan.package || purchaseLoading || !user?.uuid}
-            onPress={purchase}
-            isLoading={purchaseLoading}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => Linking.openURL("https://linkwarden.app/tos")}
           >
-            {paymentButton.icon ? (
-              <FontAwesome5
-                brand
-                name={paymentButton.icon}
-                size={paymentButton.iconSize}
-                color="white"
-              />
-            ) : (
-              <Text className="text-xl font-semibold text-white">
-                {paymentButton.label}
-              </Text>
-            )}
-          </Button>
+            <Text className="text-primary text-sm font-semibold">Terms</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() =>
+              Linking.openURL("https://linkwarden.app/privacy-policy")
+            }
+          >
+            <Text className="text-primary text-sm font-semibold">Privacy</Text>
+          </TouchableOpacity>
+        </View>
 
-          {isForcedSubscribe ? (
-            <TouchableOpacity className="w-fit mx-auto" onPress={signOut}>
-              <Text className="text-neutral text-center w-fit font-semibold">
-                Sign out
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Button
-              variant="metal"
-              size="lg"
-              onPress={() => router.replace("/(tabs)/dashboard")}
-            >
-              <Text className="text-base-content text-xl">Subscribe Later</Text>
-            </Button>
-          )}
-        </SafeAreaView>
-      </View>
-    </ScrollView>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          className="self-center mt-3"
+          onPress={close}
+        >
+          <Text className="text-neutral text-center text-sm font-semibold">
+            {isForcedSubscribe ? "Sign out" : "Subscribe Later"}
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+
+      <TouchableOpacity
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Need help?"
+        className="absolute right-4 items-center justify-center rounded-full"
+        style={{ top: insets.top + 4 }}
+        onPress={() => SheetManager.show("support-sheet")}
+      >
+        <CircleHelp size={25} color={theme["base-content"]} />
+      </TouchableOpacity>
+    </View>
   );
 }

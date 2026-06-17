@@ -10,6 +10,13 @@ import { Trans, useTranslation } from "next-i18next";
 import { useUser } from "@linkwarden/router/user";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import DeleteOwnAccountModal from "@/components/ModalContent/DeleteOwnAccountModal";
 
 const TRIAL_PERIOD_DAYS =
   Number(process.env.NEXT_PUBLIC_TRIAL_PERIOD_DAYS) || 14;
@@ -18,6 +25,7 @@ const REQUIRE_CC = process.env.NEXT_PUBLIC_REQUIRE_CC === "true";
 export default function Subscribe() {
   const { t } = useTranslation();
   const [submitLoader, setSubmitLoader] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const session = useSession();
 
   const [plan, setPlan] = useState<Plan>(1);
@@ -176,12 +184,30 @@ export default function Subscribe() {
           </Button>
 
           {REQUIRE_CC || daysLeft <= 0 ? (
-            <div
-              onClick={() => signOut()}
-              className="w-fit mx-auto cursor-pointer text-neutral font-semibold "
-            >
-              {t("sign_out")}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="w-fit mx-auto flex items-center gap-1 cursor-pointer text-neutral text-sm"
+                >
+                  {t("manage_your_account")}
+                  <i className="bi-chevron-down text-sm" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <i className="bi-box-arrow-right" />
+                  {t("sign_out")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-500 focus:text-red-500"
+                  onClick={() => setDeleteModalOpen(true)}
+                >
+                  <i className="bi-trash" />
+                  {t("delete_account")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button
               className=""
@@ -194,6 +220,10 @@ export default function Subscribe() {
           )}
         </div>
       </div>
+
+      {deleteModalOpen && (
+        <DeleteOwnAccountModal onClose={() => setDeleteModalOpen(false)} />
+      )}
     </CenteredForm>
   );
 }

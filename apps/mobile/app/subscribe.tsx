@@ -16,11 +16,13 @@ import {
   Bookmark,
   BookOpen,
   Check,
+  ChevronDown,
   CircleHelp,
   Search,
   Sparkles,
 } from "lucide-react-native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import * as DropdownMenu from "zeego/dropdown-menu";
 import Purchases, { type PurchasesPackage } from "react-native-purchases";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -308,14 +310,6 @@ export default function SubscribeScreen() {
     }
   };
 
-  const close = () => {
-    if (isForcedSubscribe) {
-      signOut();
-    } else {
-      router.replace("/(tabs)/dashboard");
-    }
-  };
-
   return (
     <View className="flex-1 bg-zinc-100 dark:bg-zinc-900">
       <ScrollView
@@ -490,15 +484,65 @@ export default function SubscribeScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          className="self-center mt-3"
-          onPress={close}
-        >
-          <Text className="text-neutral text-center text-sm font-semibold">
-            {isForcedSubscribe ? "Sign out" : "Subscribe Later"}
-          </Text>
-        </TouchableOpacity>
+        {isForcedSubscribe ? (
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                className="self-center mt-3 flex-row items-center gap-1"
+              >
+                <Text className="text-neutral text-center text-sm font-semibold">
+                  Manage your account
+                </Text>
+                <ChevronDown size={15} color={theme["neutral"]} />
+              </TouchableOpacity>
+            </DropdownMenu.Trigger>
+
+            <DropdownMenu.Content>
+              {Platform.OS === "ios" /* Reverse order for iOS */ ? (
+                <>
+                  <DropdownMenu.Item
+                    key="delete-account"
+                    destructive
+                    onSelect={() => SheetManager.show("delete-account-sheet")}
+                  >
+                    <DropdownMenu.ItemTitle>
+                      Delete account
+                    </DropdownMenu.ItemTitle>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item key="sign-out" onSelect={() => signOut()}>
+                    <DropdownMenu.ItemTitle>Sign out</DropdownMenu.ItemTitle>
+                  </DropdownMenu.Item>
+                </>
+              ) : (
+                <>
+                  <DropdownMenu.Item key="sign-out" onSelect={() => signOut()}>
+                    <DropdownMenu.ItemTitle>Sign out</DropdownMenu.ItemTitle>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    key="delete-account"
+                    destructive
+                    onSelect={() => SheetManager.show("delete-account-sheet")}
+                  >
+                    <DropdownMenu.ItemTitle>
+                      Delete account
+                    </DropdownMenu.ItemTitle>
+                  </DropdownMenu.Item>
+                </>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            className="self-center mt-3"
+            onPress={() => router.replace("/(tabs)/dashboard")}
+          >
+            <Text className="text-neutral text-center text-sm font-semibold">
+              Subscribe Later
+            </Text>
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
 
       <TouchableOpacity

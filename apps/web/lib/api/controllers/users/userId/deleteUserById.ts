@@ -11,7 +11,8 @@ export default async function deleteUserById(
   userId: number,
   body: DeleteUserBody,
   isServerAdmin: boolean,
-  queryId: number
+  queryId: number,
+  bypassPassword: boolean = false
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -38,24 +39,28 @@ export default async function deleteUserById(
 
   if (!isServerAdmin) {
     if (queryId === userId) {
-      if (user.password) {
-        const isPasswordValid = bcrypt.compareSync(
-          body.password,
-          user.password
-        );
+      // Non-subscribers (only granted when billing is enabled) may delete their
+      // own account without re-entering their password.
+      if (!bypassPassword) {
+        if (user.password) {
+          const isPasswordValid = bcrypt.compareSync(
+            body.password,
+            user.password
+          );
 
-        if (!isPasswordValid && !isServerAdmin) {
+          if (!isPasswordValid) {
+            return {
+              response: "Invalid credentials.",
+              status: 401,
+            };
+          }
+        } else {
           return {
-            response: "Invalid credentials.",
+            response:
+              "User has no password. Please create one from the password settings page.",
             status: 401,
           };
         }
-      } else {
-        return {
-          response:
-            "User has no password. Please create one from the password settings page.",
-          status: 401,
-        };
       }
     } else {
       if (user.parentSubscriptionId) {
@@ -136,18 +141,20 @@ export default async function deleteUserById(
 
         await removeFile({ filePath: `uploads/avatar/${queryId}.jpg` });
 
-        if (
-          process.env.STRIPE_SECRET_KEY &&
-          user.subscriptions?.provider === "STRIPE"
-        ) {
-          const stripe = stripeSDK();
+        const billingEnabled =
+          Boolean(process.env.STRIPE_SECRET_KEY) ||
+          Boolean(
+            process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY
+          );
 
-          // Send an email about cancellation reason if provided
-          if (
-            body.cancellation_details?.comment ||
+        // Send an email about cancellation reason if provided
+        if (
+          billingEnabled &&
+          (body.cancellation_details?.comment ||
             body.cancellation_details?.feedback ||
-            user.acceptPromotionalEmails
-          )
+            user.acceptPromotionalEmails)
+        ) {
+          try {
             await transporter.sendMail({
               from: process.env.EMAIL_FROM,
               to: "hello@linkwarden.app",
@@ -158,6 +165,16 @@ export default async function deleteUserById(
                 body.cancellation_details?.comment || "N/A"
               }\nPromotional Emails: ${String(user.acceptPromotionalEmails)}`,
             });
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        if (
+          process.env.STRIPE_SECRET_KEY &&
+          user.subscriptions?.provider === "STRIPE"
+        ) {
+          const stripe = stripeSDK();
 
           try {
             if (user.subscriptions?.id && queryId !== userId) {

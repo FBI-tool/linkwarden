@@ -148,6 +148,8 @@
   "more_information": "More information (the more details, the more helpful it'd be)",
   "feedback_placeholder": "e.g. I needed a feature that...",
   "delete_your_account": "Delete Your Account",
+  "manage_your_account": "Manage Your Account",
+  "type_confirm_to_delete": "Type \"confirm\" below to delete your account",
   "change_password": "Change Password",
   "create_password": "Create Password",
   "password_length_error": "Passwords must be at least 8 characters.",

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@linkwarden/prisma";
+import mapStore from "@/lib/api/billing/mapStore";
 
 type RevenueCatEvent = {
   type?: string;
@@ -7,6 +8,8 @@ type RevenueCatEvent = {
   original_app_user_id?: string;
   aliases?: string[];
   environment?: "PRODUCTION" | "SANDBOX";
+  store?: string;
+  product_id?: string;
   original_transaction_id?: string;
   transaction_id?: string;
   purchased_at_ms?: number | null;
@@ -77,6 +80,14 @@ export default async function revenueCatWebhook(
   const currentPeriodEnd = new Date(event.expiration_at_ms);
   const active = event.type !== "EXPIRATION" && currentPeriodEnd > new Date();
 
+  const storeData = {
+    store: mapStore(event.store),
+    storeOriginalTransactionId: event.original_transaction_id ?? undefined,
+    storeProductId: event.product_id ?? undefined,
+    storeEnvironment: event.environment,
+    revenuecatMetadata: req.body.event,
+  };
+
   try {
     const user = await prisma.user.findUnique({
       where: {
@@ -102,6 +113,7 @@ export default async function revenueCatWebhook(
         data: {
           active,
           provider: "REVENUECAT",
+          ...storeData,
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,
@@ -117,6 +129,7 @@ export default async function revenueCatWebhook(
           active,
           provider: "REVENUECAT",
           revenueCatAppUserId: event.original_app_user_id,
+          ...storeData,
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,
@@ -126,6 +139,7 @@ export default async function revenueCatWebhook(
           active,
           provider: "REVENUECAT",
           revenueCatAppUserId: event.original_app_user_id,
+          ...storeData,
           currentPeriodStart,
           currentPeriodEnd,
           quantity: 1,

@@ -1,6 +1,9 @@
+import mapStore from "./mapStore";
+
 type RevenueCatSubscription = {
   id: string;
   product_id: string;
+  store?: string | null;
   current_period_starts_at: number | null;
   current_period_ends_at: number | null;
   store_subscription_identifier: string | number | null;
@@ -61,12 +64,13 @@ export default async function checkRevenuecatSubscription(appUserId: string) {
 
   return {
     active: sub.gives_access,
-    revenueCatSubscriptionId: sub.id,
-    revenueCatProductId: sub.product_id,
-    revenueCatOriginalTransactionId: sub.store_subscription_identifier
+    store: mapStore(sub.store),
+    storeOriginalTransactionId: sub.store_subscription_identifier
       ? String(sub.store_subscription_identifier)
       : null,
+    storeProductId: sub.product_id ?? null,
     currentPeriodStart: new Date(sub.current_period_starts_at),
     currentPeriodEnd: new Date(sub.current_period_ends_at),
+    raw: sub,
   };
 }

@@ -227,6 +227,13 @@ model Subscription {
   currentPeriodEnd       DateTime
   quantity               Int      @default(1)
   provider               SubscriptionProvider
+  
+  store                      SubscriptionStore?
+  storeOriginalTransactionId String?                  @unique
+  storeProductId             String?
+  storeEnvironment           SubscriptionEnvironment?
+  revenuecatMetadata         Json?
+
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                 Int      @unique
   childUsers             User[]   @relation("ChildUsers")
@@ -237,6 +244,16 @@ model Subscription {
 enum SubscriptionProvider {
   STRIPE
   REVENUECAT
+}
+
+enum SubscriptionStore {
+  APP_STORE
+  PLAY_STORE
+}
+
+enum SubscriptionEnvironment {
+  PRODUCTION
+  SANDBOX
 }
 
 model AccessToken {

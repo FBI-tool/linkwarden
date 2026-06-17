@@ -1,5 +1,5 @@
 import { prisma } from "@linkwarden/prisma";
-import type { User } from "@linkwarden/prisma/client";
+import type { Prisma, Subscription, User } from "@linkwarden/prisma/client";
 import checkRevenuecatSubscription from "./checkRevenuecatSubscription";
 
 const hasRevenuecatCredentials = () =>
@@ -16,7 +16,7 @@ export default async function syncRevenuecatSubscription(
     !subscription ||
     !subscription.active ||
     !subscription.currentPeriodEnd ||
-    !subscription.revenueCatSubscriptionId ||
+    !subscription.storeOriginalTransactionId ||
     !subscription.currentPeriodStart
   ) {
     await prisma.subscription.updateMany({
@@ -36,6 +36,10 @@ export default async function syncRevenuecatSubscription(
     active: subscription.active,
     provider: "REVENUECAT" as const,
     revenueCatAppUserId: user.uuid,
+    store: subscription.store,
+    storeOriginalTransactionId: subscription.storeOriginalTransactionId,
+    storeProductId: subscription.storeProductId,
+    revenuecatMetadata: subscription.raw,
     currentPeriodStart: subscription.currentPeriodStart,
     currentPeriodEnd: subscription.currentPeriodEnd,
     quantity: 1,

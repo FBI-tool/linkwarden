@@ -68,6 +68,30 @@ export default function DeleteOwnAccountModal({ onClose }: Props) {
       <div className="flex flex-col gap-3">
         <p>{t("delete_warning")}</p>
 
+        {user?.hasPassword ? (
+          <div>
+            <p className="mb-2 font-semibold">{t("confirm_password")}</p>
+            <TextInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••••"
+              className="bg-base-100"
+              type="password"
+            />
+          </div>
+        ) : (
+          <div>
+            <p className="mb-2 font-semibold">{t("type_confirm_to_delete")}</p>
+            <TextInput
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              placeholder="confirm"
+              className="bg-base-100"
+              autoComplete="off"
+            />
+          </div>
+        )}
+
         <fieldset className="border rounded-md p-2 border-primary">
           <legend className="px-3 py-1 text-sm sm:text-base border rounded-md border-primary">
             <b>{t("optional")}</b> <i>{t("feedback_help")}</i>
@@ -100,30 +124,6 @@ export default function DeleteOwnAccountModal({ onClose }: Props) {
             />
           </div>
         </fieldset>
-
-        {user?.hasPassword ? (
-          <div>
-            <p className="mb-2">{t("confirm_password")}</p>
-            <TextInput
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••••"
-              className="bg-base-100"
-              type="password"
-            />
-          </div>
-        ) : (
-          <div>
-            <p className="mb-2">{t("type_confirm_to_delete")}</p>
-            <TextInput
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              placeholder="confirm"
-              className="bg-base-100"
-              autoComplete="off"
-            />
-          </div>
-        )}
 
         <Button
           className="ml-auto"

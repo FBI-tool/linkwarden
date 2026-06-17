@@ -108,59 +108,15 @@ export default function DeleteAccountSheet() {
       />
 
       <View className="px-8 pb-5">
-        <Text className="text-base-content">
+        <Text>
           This will permanently delete all the Links, Collections, Tags, and
           archived data you own. It will also log you out. This action is
           irreversible!
         </Text>
 
-        <Text className="text-neutral text-sm mt-5 mb-2">
-          Reason for cancellation (optional, but it really helps us improve!)
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {FEEDBACK_OPTIONS.map((option) => {
-            const isSelected = feedback === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                activeOpacity={0.7}
-                onPress={() =>
-                  setFeedback(isSelected ? undefined : option.value)
-                }
-                className="rounded-full border px-3 py-1.5"
-                style={{
-                  borderColor: isSelected
-                    ? theme.accent
-                    : theme["neutral-content"],
-                  backgroundColor: isSelected ? theme.accent : "transparent",
-                }}
-              >
-                <Text
-                  className="text-sm"
-                  style={{
-                    color: isSelected ? "#FFFFFF" : theme["base-content"],
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Input
-          placeholder="More information (optional)"
-          placeholderTextColor={theme.neutral}
-          className="mt-4 bg-base-200 min-h-20"
-          multiline
-          textAlignVertical="top"
-          value={comment}
-          onChangeText={setComment}
-        />
-
         {user?.hasPassword ? (
           <>
-            <Text className="text-base-content mt-5 mb-2">
+            <Text className="text-base-content mt-5 mb-2 font-semibold">
               Confirm password
             </Text>
             <Input
@@ -176,7 +132,7 @@ export default function DeleteAccountSheet() {
           </>
         ) : (
           <>
-            <Text className="text-base-content mt-5 mb-2">
+            <Text className="text-base-content mt-5 mb-2 font-semibold">
               Type "confirm" below to delete your account
             </Text>
             <Input
@@ -190,6 +146,53 @@ export default function DeleteAccountSheet() {
             />
           </>
         )}
+
+        <View className="border border-neutral-content p-2 rounded-md mt-5 mb-2">
+          <Text className="italic font-semibold mb-2">
+            Optional (but it really helps us improve!)
+          </Text>
+          <Text className="mb-2">Reason for cancellation</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {FEEDBACK_OPTIONS.map((option) => {
+              const isSelected = feedback === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    setFeedback(isSelected ? undefined : option.value)
+                  }
+                  className="rounded-full border px-3 py-1.5"
+                  style={{
+                    borderColor: isSelected
+                      ? theme.accent
+                      : theme["neutral-content"],
+                    backgroundColor: isSelected ? theme.accent : "transparent",
+                  }}
+                >
+                  <Text
+                    className="text-sm"
+                    style={{
+                      color: isSelected ? "#FFFFFF" : theme["base-content"],
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Input
+            placeholder="More information (optional)"
+            placeholderTextColor={theme.neutral}
+            className="mt-4 bg-base-200 min-h-20"
+            multiline
+            textAlignVertical="top"
+            value={comment}
+            onChangeText={setComment}
+          />
+        </View>
 
         <Button
           onPress={handleDelete}

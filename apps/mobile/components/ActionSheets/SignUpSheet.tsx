@@ -129,6 +129,7 @@ export default function SignUpSheet() {
     if (emailSignUp) setSentTo({ email, instance });
     else {
       Alert.alert("Account created", "You can log in now.");
+      closeSheet();
     }
   };
 
@@ -243,32 +244,36 @@ export default function SignUpSheet() {
                 setForm({ ...form, passwordConfirmation: text })
               }
             />
-            <TouchableOpacity
-              activeOpacity={0.75}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: acceptPromotionalEmails }}
-              className="flex-row items-center gap-3 py-1"
-              onPress={() => setAcceptPromotionalEmails((checked) => !checked)}
-            >
-              <View
-                className="h-5 w-5 items-center justify-center rounded border"
-                style={{
-                  backgroundColor: acceptPromotionalEmails
-                    ? theme.accent
-                    : "transparent",
-                  borderColor: acceptPromotionalEmails
-                    ? theme.accent
-                    : theme.neutral,
-                }}
+            {instance === cloudInstance && (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptPromotionalEmails }}
+                className="flex-row items-center gap-3 py-1"
+                onPress={() =>
+                  setAcceptPromotionalEmails((checked) => !checked)
+                }
               >
-                {acceptPromotionalEmails && (
-                  <Check size={14} color="#FFFFFF" strokeWidth={3} />
-                )}
-              </View>
-              <Text className="text-neutral flex-1 text-sm">
-                Get notified about new features and offers via email.
-              </Text>
-            </TouchableOpacity>
+                <View
+                  className="h-5 w-5 items-center justify-center rounded border"
+                  style={{
+                    backgroundColor: acceptPromotionalEmails
+                      ? theme.accent
+                      : "transparent",
+                    borderColor: acceptPromotionalEmails
+                      ? theme.accent
+                      : theme.neutral,
+                  }}
+                >
+                  {acceptPromotionalEmails && (
+                    <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                  )}
+                </View>
+                <Text className="text-neutral flex-1 text-sm">
+                  Get notified about new features and offers via email.
+                </Text>
+              </TouchableOpacity>
+            )}
             <Button
               variant="accent"
               size="lg"

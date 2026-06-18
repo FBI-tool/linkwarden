@@ -1,5 +1,5 @@
 import { prisma } from "@linkwarden/prisma";
-import type { Prisma, Subscription, User } from "@linkwarden/prisma/client";
+import type { Prisma, User } from "@linkwarden/prisma/client";
 import checkRevenuecatSubscription from "./checkRevenuecatSubscription";
 
 const hasRevenuecatCredentials = () =>
@@ -32,17 +32,24 @@ export default async function syncRevenuecatSubscription(
     return null;
   }
 
+  const isGooglePlay = subscription.store === "PLAY_STORE";
+
   const data = {
     active: subscription.active,
     provider: "REVENUECAT" as const,
+    // Clear any leftover Stripe identifier when switching Stripe -> RevenueCat.
+    stripeSubscriptionId: null,
     revenueCatAppUserId: user.uuid,
     store: subscription.store,
     storeOriginalTransactionId: subscription.storeOriginalTransactionId,
     storeProductId: subscription.storeProductId,
-    revenuecatMetadata: subscription.raw,
+    revenuecatMetadata: subscription.raw as Prisma.InputJsonValue,
     currentPeriodStart: subscription.currentPeriodStart,
     currentPeriodEnd: subscription.currentPeriodEnd,
     quantity: 1,
+    // Leave the client-captured token alone for Google Play; clear a stale one
+    // when switching to a non-Google store (e.g. Google -> Apple).
+    ...(isGooglePlay ? {} : { googlePurchaseToken: null }),
   };
 
   const existingSubscription = await prisma.subscription.findUnique({

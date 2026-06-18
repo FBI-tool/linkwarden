@@ -8,7 +8,7 @@ import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
 import useAuthStore from "@/store/auth";
 import { useConfig } from "@linkwarden/router/config";
 import { useUser } from "@linkwarden/router/user";
-import { Plan } from "@linkwarden/types/global";
+import { MobileAuth, Plan } from "@linkwarden/types/global";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import {
@@ -43,6 +43,37 @@ import {
 } from "react-native-safe-area-context";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const saveGooglePurchaseToken = async (
+  auth: MobileAuth,
+  purchaseToken: string,
+  attempts = 5
+) => {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(
+        `${auth.instance}/api/v1/billing/google-purchase-token`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.session}`,
+          },
+          body: JSON.stringify({ purchaseToken }),
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.updated > 0) return;
+      } else if (res.status === 409) {
+        return;
+      }
+    } catch {}
+
+    await wait(1500);
+  }
+};
 
 const features = [
   { title: "Save & organize", icon: Bookmark },
@@ -297,10 +328,16 @@ export default function SubscribeScreen() {
 
       if (alreadySubscribed) return;
 
-      const { customerInfo } = await Purchases.purchasePackage(
+      const { customerInfo, transaction } = await Purchases.purchasePackage(
         selectedPlan.package
       );
       await activateSubscription(customerInfo);
+
+      // Android only: persist the Google Play purchase token (null on iOS). Fire-and-forget
+      // after activation, by which point the subscription row exists server-side.
+      if (transaction?.purchaseToken) {
+        saveGooglePurchaseToken(auth, transaction.purchaseToken);
+      }
     } catch (error: any) {
       if (!error?.userCancelled) {
         Alert.alert("Purchase failed", "Could not complete purchase.");

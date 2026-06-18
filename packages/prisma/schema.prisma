@@ -229,9 +229,9 @@ model Subscription {
   provider               SubscriptionProvider
   
   store                      SubscriptionStore?
-  storeOriginalTransactionId String?                  @unique
+  storeOriginalTransactionId String?              @unique
   storeProductId             String?
-  storeEnvironment           SubscriptionEnvironment?
+  googlePurchaseToken        String?              @unique // Google Play purchase token — captured client-side; RevenueCat never exposes it, and Google's API needs it
   revenuecatMetadata         Json?
 
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -249,11 +249,6 @@ enum SubscriptionProvider {
 enum SubscriptionStore {
   APP_STORE
   PLAY_STORE
-}
-
-enum SubscriptionEnvironment {
-  PRODUCTION
-  SANDBOX
 }
 
 model AccessToken {

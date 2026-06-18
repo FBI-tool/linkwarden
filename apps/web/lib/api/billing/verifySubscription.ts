@@ -2,6 +2,7 @@ import { prisma } from "@linkwarden/prisma";
 import { Subscription, User } from "@linkwarden/prisma/client";
 import checkStripeSubscriptionByEmail from "./checkStripeSubscriptionByEmail";
 import syncRevenuecatSubscription from "./syncRevenuecatSubscription";
+import { stripeStoreReset } from "./stripeStoreReset";
 
 interface UserIncludingSubscription extends User {
   subscriptions: Subscription | null;
@@ -62,6 +63,7 @@ export default async function verifySubscription(
           create: {
             active,
             provider: "STRIPE",
+            ...stripeStoreReset,
             stripeSubscriptionId,
             currentPeriodStart: new Date(currentPeriodStart),
             currentPeriodEnd: new Date(currentPeriodEnd),
@@ -71,6 +73,7 @@ export default async function verifySubscription(
           update: {
             active,
             provider: "STRIPE",
+            ...stripeStoreReset,
             stripeSubscriptionId,
             currentPeriodStart: new Date(currentPeriodStart),
             currentPeriodEnd: new Date(currentPeriodEnd),

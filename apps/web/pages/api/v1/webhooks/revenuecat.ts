@@ -80,12 +80,18 @@ export default async function revenueCatWebhook(
   const currentPeriodEnd = new Date(event.expiration_at_ms);
   const active = event.type !== "EXPIRATION" && currentPeriodEnd > new Date();
 
+  const mappedStore = mapStore(event.store);
+
   const storeData = {
-    store: mapStore(event.store),
+    // Clear any leftover Stripe identifier when switching Stripe -> RevenueCat.
+    stripeSubscriptionId: null,
+    store: mappedStore,
     storeOriginalTransactionId: event.original_transaction_id ?? undefined,
     storeProductId: event.product_id ?? undefined,
-    storeEnvironment: event.environment,
     revenuecatMetadata: req.body.event,
+    // Leave the client-captured token alone for Google Play; clear a stale one
+    // when this isn't a Google Play subscription (e.g. Google -> Apple).
+    ...(mappedStore === "PLAY_STORE" ? {} : { googlePurchaseToken: null }),
   };
 
   try {

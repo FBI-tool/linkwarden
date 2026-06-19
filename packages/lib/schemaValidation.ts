@@ -5,7 +5,7 @@ import {
   DashboardSectionType,
   Theme,
 } from "@linkwarden/prisma/client";
-import { number, z } from "zod";
+import { z } from "zod";
 
 // const stringField = z.string({
 //   errorMap: (e) => ({
@@ -62,7 +62,7 @@ export const UpdateUserSchema = () => {
     process.env.EMAIL_FROM && process.env.EMAIL_SERVER ? true : false;
 
   return z.object({
-    name: z.string().trim().min(1).max(50).optional(),
+    name: z.string().trim().min(0).max(50).optional(),
     email: emailEnabled
       ? z.string().trim().email().toLowerCase()
       : z.string().nullish(),

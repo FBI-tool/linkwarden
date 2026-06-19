@@ -13,6 +13,7 @@ import { rawTheme, ThemeName } from "@/lib/colors";
 import { useColorScheme } from "nativewind";
 import { useQueryClient } from "@tanstack/react-query";
 import { resetInfiniteQueryPagination } from "@linkwarden/router/lib";
+import { hasOptimisticLink } from "@/lib/utils";
 
 const RenderItem = React.memo(
   ({ item }: { item: LinkIncludingShortenedCollectionAndTags }) => {
@@ -88,7 +89,11 @@ export default function Links({ links, data }: Props) {
           (e) => e.item
         ) as LinkIncludingShortenedCollectionAndTags[];
 
-        if (!data.isRefetching && links.some((e) => e.id && !e.preview))
+        if (
+          !data.isRefetching &&
+          !hasOptimisticLink(links) &&
+          links.some((e) => typeof e.id === "number" && e.id > 0 && !e.preview)
+        )
           data.refetch();
       }}
       viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}

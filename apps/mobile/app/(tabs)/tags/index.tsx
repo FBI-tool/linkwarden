@@ -1,11 +1,4 @@
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Platform,
-  Text,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator } from "react-native";
 import useAuthStore from "@/store/auth";
 import TagListing from "@/components/TagListing";
 import { useLocalSearchParams } from "expo-router";
@@ -57,7 +50,6 @@ export default function TagsScreen() {
 
   return (
     <View
-      style={styles.container}
       className="h-full bg-base-100"
       collapsable={false}
       collapsableChildren={false}
@@ -117,12 +109,3 @@ export default function TagsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 83,
-    },
-    default: {},
-  }),
-});

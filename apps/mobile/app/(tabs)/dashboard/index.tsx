@@ -157,17 +157,9 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 49,
-      flexDirection: "column",
-      gap: 15,
-      paddingVertical: 20,
-    },
-    default: {
-      flexDirection: "column",
-      gap: 15,
-      paddingVertical: 20,
-    },
-  }),
+  container: {
+    flexDirection: "column",
+    gap: 15,
+    paddingVertical: 20,
+  },
 });

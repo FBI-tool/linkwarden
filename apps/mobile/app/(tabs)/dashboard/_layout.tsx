@@ -19,8 +19,11 @@ export default function Layout() {
         headerLargeTitle: true,
         headerTransparent: Platform.OS === "ios",
         headerShadowVisible: false,
-        headerBlurEffect:
-          colorScheme === "dark" ? "systemMaterialDark" : "systemMaterial",
+        headerBlurEffect: isIOS26Plus
+          ? undefined
+          : colorScheme === "dark"
+            ? "systemMaterialDark"
+            : "systemMaterial",
         headerTintColor: colorScheme === "dark" ? "white" : "black",
         headerLargeStyle: {
           backgroundColor: isIOS26Plus

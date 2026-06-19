@@ -1,5 +1,5 @@
 import { useLinks } from "@linkwarden/router/links";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, Platform } from "react-native";
 import useAuthStore from "@/store/auth";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -58,7 +58,6 @@ export default function LinksScreen() {
 
   return (
     <View
-      style={styles.container}
       className="h-full bg-base-100"
       collapsable={false}
       collapsableChildren={false}
@@ -67,12 +66,3 @@ export default function LinksScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 83,
-    },
-    default: {},
-  }),
-});

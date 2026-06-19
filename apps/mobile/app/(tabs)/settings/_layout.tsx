@@ -19,8 +19,11 @@ export default function Layout() {
         headerTintColor: colorScheme === "dark" ? "white" : "black",
         headerShadowVisible: false,
         headerBackTitle: "Back",
-        headerBlurEffect:
-          colorScheme === "dark" ? "systemMaterialDark" : "systemMaterial",
+        headerBlurEffect: isIOS26Plus
+          ? undefined
+          : colorScheme === "dark"
+            ? "systemMaterialDark"
+            : "systemMaterial",
         headerLargeStyle: {
           backgroundColor: isIOS26Plus
             ? "transparent"
@@ -48,8 +51,11 @@ export default function Layout() {
           headerTitle: "Preferred Collection",
           headerLargeTitle: false,
           headerTransparent: Platform.OS === "ios",
-          headerBlurEffect:
-            colorScheme === "dark" ? "systemMaterialDark" : "systemMaterial",
+          headerBlurEffect: isIOS26Plus
+            ? undefined
+            : colorScheme === "dark"
+              ? "systemMaterialDark"
+              : "systemMaterial",
           ...(isIOS26Plus
             ? {
                 headerBackground: () => (

@@ -76,6 +76,7 @@ const Main = (props: SheetProps<"edit-link-sheet">) => {
         {props.payload?.link?.url && (
           <Input
             placeholder="URL"
+            autoCapitalize="none"
             className="mb-4 bg-base-100"
             value={link?.url || ""}
             onChangeText={(text) => link?.id && setLink({ ...link, url: text })}

@@ -231,6 +231,7 @@ export default function SignUpSheet() {
               textAlignVertical="center"
               placeholder="Password"
               secureTextEntry
+              autoCapitalize="none"
               value={form.password}
               onChangeText={(text) => setForm({ ...form, password: text })}
             />
@@ -239,6 +240,7 @@ export default function SignUpSheet() {
               textAlignVertical="center"
               placeholder="Confirm Password"
               secureTextEntry
+              autoCapitalize="none"
               value={form.passwordConfirmation}
               onChangeText={(text) =>
                 setForm({ ...form, passwordConfirmation: text })

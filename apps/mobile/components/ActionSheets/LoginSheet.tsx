@@ -61,7 +61,12 @@ export default function LoginSheet() {
     if (!instance || (!form.token && (!form.user || !form.password))) return;
 
     setIsLoading(true);
-    const success = await signIn(form.user, form.password, instance, form.token);
+    const success = await signIn(
+      form.user,
+      form.password,
+      instance,
+      form.token
+    );
     setIsLoading(false);
 
     if (success) closeSheet();
@@ -100,12 +105,14 @@ export default function LoginSheet() {
               textAlignVertical="center"
               placeholder="Email or Username"
               value={form.user}
+              autoCapitalize="none"
               onChangeText={(text) => setForm({ ...form, user: text })}
             />
             <Input
               className="w-full text-xl p-3 leading-tight h-12"
               textAlignVertical="center"
               placeholder="Password"
+              autoCapitalize="none"
               secureTextEntry
               value={form.password}
               onChangeText={(text) => setForm({ ...form, password: text })}
@@ -116,6 +123,7 @@ export default function LoginSheet() {
             className="w-full text-xl p-3 leading-tight h-12"
             textAlignVertical="center"
             placeholder="Access Token"
+            autoCapitalize="none"
             secureTextEntry
             value={form.token}
             onChangeText={(text) => setForm({ ...form, token: text })}

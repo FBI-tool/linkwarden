@@ -3,11 +3,13 @@ import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
 import { isAtLeastInstanceVersion } from "@linkwarden/router/config";
 import { FontAwesome } from "@expo/vector-icons";
-import { Redirect } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { ChevronDown, CircleHelp } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { useEffect } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Platform,
@@ -22,6 +24,7 @@ import { KeyboardToolbar } from "react-native-keyboard-controller";
 import * as DropdownMenu from "zeego/dropdown-menu";
 
 const cloudInstance = "https://cloud.linkwarden.app";
+let signingOutRecoverySession: string | null = null;
 
 const displayInstance = (instance: string | null | undefined) =>
   (instance || cloudInstance).replace(/^https?:\/\//, "").replace(/\/+$/, "");
@@ -34,7 +37,11 @@ export default function HomeScreen() {
     fetchInstanceInfo,
     signInWithApple,
     signInWithGoogle,
+    signOut,
   } = useAuthStore();
+  const { serverRecovery } = useLocalSearchParams<{
+    serverRecovery?: string;
+  }>();
   const { colorScheme } = useColorScheme();
   const theme = rawTheme[colorScheme as ThemeName];
   const serverName = displayInstance(auth.instance);
@@ -94,8 +101,41 @@ export default function HomeScreen() {
   const orderedServerOptions =
     Platform.OS === "ios" ? [...serverOptions].reverse() : serverOptions;
   useEffect(() => {
+    if (serverRecovery === "true") return;
+
     fetchInstanceInfo(instance);
-  }, [fetchInstanceInfo, instance]);
+  }, [fetchInstanceInfo, instance, serverRecovery]);
+
+  useEffect(() => {
+    if (
+      serverRecovery !== "true" ||
+      auth.status !== "authenticated" ||
+      !auth.session ||
+      signingOutRecoverySession === auth.session
+    )
+      return;
+
+    signingOutRecoverySession = auth.session;
+    signOut()
+      .then(() => {
+        Alert.alert(
+          "Signed out",
+          "The server could not be reached and no cached user data was available. Check your connection and sign in again."
+        );
+      })
+      .catch((error) => {
+        signingOutRecoverySession = null;
+        console.error("Could not sign out after losing the server:", error);
+      });
+  }, [auth.session, auth.status, serverRecovery, signOut]);
+
+  if (serverRecovery === "true") {
+    return (
+      <View className="flex-1 items-center justify-center bg-base-100">
+        <ActivityIndicator size="large" color={theme["base-content"]} />
+      </View>
+    );
+  }
 
   if (auth.session) {
     return <Redirect href="/dashboard" />;

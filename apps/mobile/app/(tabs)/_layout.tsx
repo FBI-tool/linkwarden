@@ -14,22 +14,56 @@ import useAuthStore from "@/store/auth";
 import { useUser } from "@linkwarden/router/user";
 import { useConfig } from "@linkwarden/router/config";
 import { shouldRouteToSubscribe } from "@/lib/subscription";
+import { queryClient } from "@/lib/queryClient";
+
+const isCacheEmpty = (instance: string) =>
+  queryClient.getQueryData(["user"]) == null &&
+  queryClient.getQueryData(["config", instance]) == null;
+
+let recoveringSession: string | null = null;
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
   const router = useRouter();
   const { auth } = useAuthStore();
-  const { data: user, isLoading: isUserLoading } = useUser(auth);
+  const {
+    data: user,
+    isError: isUserError,
+    isLoading: isUserLoading,
+  } = useUser(auth);
   const config = useConfig(auth);
   const routeToSubscribe = shouldRouteToSubscribe(user, config.data);
+  const hasEmptyCache = auth.instance ? isCacheEmpty(auth.instance) : false;
+  const shouldRecover =
+    auth.status === "authenticated" &&
+    isUserError &&
+    config.isError &&
+    hasEmptyCache;
 
   useEffect(() => {
     if (routeToSubscribe) router.replace("/subscribe");
   }, [routeToSubscribe, router]);
 
+  useEffect(() => {
+    if (
+      !shouldRecover ||
+      !auth.session ||
+      recoveringSession === auth.session
+    )
+      return;
+
+    recoveringSession = auth.session;
+    router.replace({
+      pathname: "/",
+      params: {
+        serverRecovery: "true",
+      },
+    });
+  }, [auth.session, router, shouldRecover]);
+
   if (
     auth.status === "authenticated" &&
-    (isUserLoading || config.isLoading || routeToSubscribe)
+    (isUserLoading || config.isLoading || routeToSubscribe || shouldRecover)
   ) {
     return (
       <View className="flex-1 items-center justify-center bg-base-100">

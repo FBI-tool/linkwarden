@@ -4,6 +4,8 @@ import {
   Text,
   ActivityIndicator,
   ViewToken,
+  ScrollView,
+  StyleSheet,
 } from "react-native";
 import LinkListing from "@/components/LinkListing";
 import React, { useState } from "react";
@@ -31,30 +33,51 @@ export default function Links({ links, data }: Props) {
   const queryClient = useQueryClient();
   const [promptedRefetch, setPromptedRefetch] = useState(false);
 
+  const refreshControl = (
+    <Spinner
+      refreshing={data.isRefetching && promptedRefetch}
+      onRefresh={async () => {
+        setPromptedRefetch(true);
+        await resetInfiniteQueryPagination(queryClient, ["links"]);
+        setPromptedRefetch(false);
+      }}
+      progressBackgroundColor={rawTheme[colorScheme as ThemeName]["base-200"]}
+      colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
+    />
+  );
+
   return data.isLoading ? (
     <View className="flex justify-center h-screen items-center">
       <ActivityIndicator size="large" />
       <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
+    </View>
+  ) : (links?.length ?? 0) === 0 ? (
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={StyleSheet.absoluteFill}
+        contentContainerStyle={{ flexGrow: 1 }}
+        contentInsetAdjustmentBehavior="never"
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
+      />
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text className="text-center text-xl text-neutral">
+          Nothing found...
+        </Text>
+      </View>
     </View>
   ) : (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
       ListHeaderComponent={() => <></>}
       data={links || []}
-      refreshControl={
-        <Spinner
-          refreshing={data.isRefetching && promptedRefetch}
-          onRefresh={async () => {
-            setPromptedRefetch(true);
-            await resetInfiniteQueryPagination(queryClient, ["links"]);
-            setPromptedRefetch(false);
-          }}
-          progressBackgroundColor={
-            rawTheme[colorScheme as ThemeName]["base-200"]
-          }
-          colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
-        />
-      }
+      refreshControl={refreshControl}
       refreshing={data.isRefetching && promptedRefetch}
       initialNumToRender={4}
       keyExtractor={(item) => item.id?.toString() || ""}
@@ -66,13 +89,6 @@ export default function Links({ links, data }: Props) {
       ItemSeparatorComponent={() => (
         <View className="bg-neutral-content h-px" />
       )}
-      ListEmptyComponent={
-        <View className="flex justify-center py-10 items-center">
-          <Text className="text-center text-xl text-neutral">
-            Nothing found...
-          </Text>
-        </View>
-      }
       ListFooterComponent={
         data.isFetchingNextPage ? (
           <View className="py-4 items-center">

@@ -1,4 +1,11 @@
-import { View, FlatList, Text, ActivityIndicator } from "react-native";
+import {
+  View,
+  FlatList,
+  Text,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import useAuthStore from "@/store/auth";
 import CollectionListing from "@/components/CollectionListing";
 import { useLocalSearchParams } from "expo-router";
@@ -29,6 +36,15 @@ export default function CollectionsScreen() {
     setFilteredCollections(filter);
   }, [search, collections.data]);
 
+  const refreshControl = (
+    <Spinner
+      refreshing={collections.isRefetching}
+      onRefresh={() => collections.refetch()}
+      progressBackgroundColor={rawTheme[colorScheme as ThemeName]["base-200"]}
+      colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
+    />
+  );
+
   return (
     <View
       className="h-full bg-base-100"
@@ -40,21 +56,33 @@ export default function CollectionsScreen() {
           <ActivityIndicator size="large" />
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
+      ) : filteredCollections.length === 0 ? (
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={StyleSheet.absoluteFill}
+            contentContainerStyle={{ flexGrow: 1 }}
+            contentInsetAdjustmentBehavior="never"
+            showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              { justifyContent: "center", alignItems: "center" },
+            ]}
+          >
+            <Text className="text-center text-xl text-neutral">
+              Nothing found...
+            </Text>
+          </View>
+        </View>
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={() => <></>}
           data={filteredCollections}
-          refreshControl={
-            <Spinner
-              refreshing={collections.isRefetching}
-              onRefresh={() => collections.refetch()}
-              progressBackgroundColor={
-                rawTheme[colorScheme as ThemeName]["base-200"]
-              }
-              colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
-            />
-          }
+          refreshControl={refreshControl}
           refreshing={collections.isRefetching}
           initialNumToRender={4}
           keyExtractor={(item) => item.id?.toString() || ""}
@@ -63,13 +91,6 @@ export default function CollectionsScreen() {
           ItemSeparatorComponent={() => (
             <View className="bg-neutral-content h-px" />
           )}
-          ListEmptyComponent={
-            <View className="flex justify-center py-10 items-center">
-              <Text className="text-center text-xl text-neutral">
-                Nothing found...
-              </Text>
-            </View>
-          }
         />
       )}
     </View>

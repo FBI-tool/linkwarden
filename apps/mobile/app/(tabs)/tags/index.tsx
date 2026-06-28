@@ -1,4 +1,11 @@
-import { View, FlatList, Text, ActivityIndicator } from "react-native";
+import {
+  View,
+  FlatList,
+  Text,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import useAuthStore from "@/store/auth";
 import TagListing from "@/components/TagListing";
 import { useLocalSearchParams } from "expo-router";
@@ -48,6 +55,15 @@ export default function TagsScreen() {
     return tags.data.filter((tag) => tag.name.toLowerCase().includes(q));
   }, [searchQuery, tags.data]);
 
+  const refreshControl = (
+    <Spinner
+      refreshing={tags.isRefetching}
+      onRefresh={() => resetInfiniteQueryPagination(queryClient, ["tags"])}
+      progressBackgroundColor={rawTheme[colorScheme as ThemeName]["base-200"]}
+      colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
+    />
+  );
+
   return (
     <View
       className="h-full bg-base-100"
@@ -59,23 +75,35 @@ export default function TagsScreen() {
           <ActivityIndicator size="large" />
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
+      ) : (filteredTags?.length ?? 0) === 0 ? (
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={StyleSheet.absoluteFill}
+            contentContainerStyle={{ flexGrow: 1 }}
+            contentInsetAdjustmentBehavior="never"
+            showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
+          />
+          {!tags.isFetching && (
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                { justifyContent: "center", alignItems: "center" },
+              ]}
+            >
+              <Text className="text-center text-xl text-neutral">
+                Nothing found...
+              </Text>
+            </View>
+          )}
+        </View>
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={() => <></>}
           data={filteredTags}
-          refreshControl={
-            <Spinner
-              refreshing={tags.isRefetching}
-              onRefresh={() =>
-                resetInfiniteQueryPagination(queryClient, ["tags"])
-              }
-              progressBackgroundColor={
-                rawTheme[colorScheme as ThemeName]["base-200"]
-              }
-              colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
-            />
-          }
+          refreshControl={refreshControl}
           refreshing={tags.isRefetching}
           initialNumToRender={4}
           keyExtractor={(item) => item.id?.toString() || ""}
@@ -94,15 +122,6 @@ export default function TagsScreen() {
                 <ActivityIndicator size="small" />
               </View>
             ) : null
-          }
-          ListEmptyComponent={
-            tags.isFetching ? null : (
-              <View className="flex justify-center py-10 items-center">
-                <Text className="text-center text-xl text-neutral">
-                  Nothing found...
-                </Text>
-              </View>
-            )
           }
         />
       )}

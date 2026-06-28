@@ -1,12 +1,6 @@
-import {
-  View,
-  FlatList,
-  Text,
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator } from "react-native";
 import useAuthStore from "@/store/auth";
+import EmptyState from "@/components/EmptyState";
 import CollectionListing from "@/components/CollectionListing";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -57,26 +51,7 @@ export default function CollectionsScreen() {
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
       ) : filteredCollections.length === 0 ? (
-        <View style={{ flex: 1 }}>
-          <ScrollView
-            style={StyleSheet.absoluteFill}
-            contentContainerStyle={{ flexGrow: 1 }}
-            contentInsetAdjustmentBehavior="never"
-            showsVerticalScrollIndicator={false}
-            refreshControl={refreshControl}
-          />
-          <View
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              { justifyContent: "center", alignItems: "center" },
-            ]}
-          >
-            <Text className="text-center text-xl text-neutral">
-              Nothing found...
-            </Text>
-          </View>
-        </View>
+        <EmptyState refreshControl={refreshControl} />
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"

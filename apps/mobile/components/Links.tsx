@@ -1,13 +1,6 @@
-import {
-  View,
-  FlatList,
-  Text,
-  ActivityIndicator,
-  ViewToken,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator, ViewToken } from "react-native";
 import LinkListing from "@/components/LinkListing";
+import EmptyState from "@/components/EmptyState";
 import React, { useState } from "react";
 import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
 import Spinner from "@/components/ui/Spinner";
@@ -52,26 +45,7 @@ export default function Links({ links, data }: Props) {
       <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
     </View>
   ) : (links?.length ?? 0) === 0 ? (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        style={StyleSheet.absoluteFill}
-        contentContainerStyle={{ flexGrow: 1 }}
-        contentInsetAdjustmentBehavior="never"
-        showsVerticalScrollIndicator={false}
-        refreshControl={refreshControl}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <Text className="text-center text-xl text-neutral">
-          Nothing found...
-        </Text>
-      </View>
-    </View>
+    <EmptyState refreshControl={refreshControl} />
   ) : (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"

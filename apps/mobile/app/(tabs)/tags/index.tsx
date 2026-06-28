@@ -1,12 +1,6 @@
-import {
-  View,
-  FlatList,
-  Text,
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator } from "react-native";
 import useAuthStore from "@/store/auth";
+import EmptyState from "@/components/EmptyState";
 import TagListing from "@/components/TagListing";
 import { useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
@@ -76,28 +70,10 @@ export default function TagsScreen() {
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
       ) : (filteredTags?.length ?? 0) === 0 ? (
-        <View style={{ flex: 1 }}>
-          <ScrollView
-            style={StyleSheet.absoluteFill}
-            contentContainerStyle={{ flexGrow: 1 }}
-            contentInsetAdjustmentBehavior="never"
-            showsVerticalScrollIndicator={false}
-            refreshControl={refreshControl}
-          />
-          {!tags.isFetching && (
-            <View
-              pointerEvents="none"
-              style={[
-                StyleSheet.absoluteFill,
-                { justifyContent: "center", alignItems: "center" },
-              ]}
-            >
-              <Text className="text-center text-xl text-neutral">
-                Nothing found...
-              </Text>
-            </View>
-          )}
-        </View>
+        <EmptyState
+          showMessage={!tags.isFetching}
+          refreshControl={refreshControl}
+        />
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"

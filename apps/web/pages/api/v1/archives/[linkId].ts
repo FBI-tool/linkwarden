@@ -123,7 +123,11 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   res
     .setHeader("Content-Type", contentType)
     .setHeader("Cache-Control", "private, max-age=31536000, immutable")
+    .setHeader("X-Content-Type-Options", "nosniff")
     .status(status as number);
+  if (contentType?.startsWith("text/html")) {
+    res.setHeader("Content-Security-Policy", "sandbox");
+  }
   return res.send(file);
 }
 

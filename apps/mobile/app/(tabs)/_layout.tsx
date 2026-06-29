@@ -7,7 +7,7 @@ import {
 } from "expo-router/unstable-native-tabs";
 import React, { useEffect } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Feather from "@expo/vector-icons/Feather";
 import { useColorScheme } from "nativewind";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
@@ -89,57 +89,27 @@ export default function TabLayout() {
     >
       <NativeTabs.Trigger name="dashboard">
         <Label>Dashboard</Label>
-        <Icon
-          sf={{ default: "house", selected: "house.fill" }}
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="home-outline" />,
-            selected: <VectorIcon family={Ionicons} name="home" />,
-          }}
-        />
+        <Icon src={<VectorIcon family={Feather} name="home" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="links">
         <Label>Links</Label>
-        <Icon
-          sf="link"
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="link-outline" />,
-            selected: <VectorIcon family={Ionicons} name="link" />,
-          }}
-        />
+        <Icon src={<VectorIcon family={Feather} name="link" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="collections">
         <Label>Collections</Label>
-        <Icon
-          sf={{ default: "folder", selected: "folder.fill" }}
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="folder-outline" />,
-            selected: <VectorIcon family={Ionicons} name="folder" />,
-          }}
-        />
+        <Icon src={<VectorIcon family={Feather} name="folder" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="tags">
         <Label>Tags</Label>
-        <Icon
-          sf="number"
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="pricetag-outline" />,
-            selected: <VectorIcon family={Ionicons} name="pricetag" />,
-          }}
-        />
+        <Icon src={<VectorIcon family={Feather} name="hash" />} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="settings">
         <Label>Settings</Label>
-        <Icon
-          sf={{ default: "gearshape", selected: "gearshape.fill" }}
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="settings-outline" />,
-            selected: <VectorIcon family={Ionicons} name="settings" />,
-          }}
-        />
+        <Icon src={<VectorIcon family={Feather} name="settings" />} />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

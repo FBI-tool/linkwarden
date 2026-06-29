@@ -13,8 +13,7 @@ const pollingIntervalInSeconds =
 // its fetch pending forever. Because every feed is awaited together in one
 // Promise.all below, that one hung request makes the whole batch never settle,
 // which freezes the polling loop indefinitely (no further cycles ever run).
-const feedTimeoutInMs =
-  (Number(process.env.RSS_FEED_TIMEOUT_SECONDS) || 30) * 1000;
+const feedTimeoutInMs = 30_000;
 
 export async function startRSSPolling() {
   console.log("\x1b[34m%s\x1b[0m", "Starting RSS polling...");

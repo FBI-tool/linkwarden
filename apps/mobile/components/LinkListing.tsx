@@ -64,7 +64,8 @@ const LinkListing = ({ link, dashboard }: Props) => {
   useEffect(() => {
     loadCacheOrFetch({
       filePath:
-        FileSystem.documentDirectory + `archivedData/previews/link_${link.id}.jpg`,
+        FileSystem.documentDirectory +
+        `archivedData/previews/link_${link.id}.jpg`,
       setContent: setPreview,
       shouldFetch: formatAvailable(link, "preview"),
       onStart: () => setPreview(""),
@@ -95,7 +96,7 @@ const LinkListing = ({ link, dashboard }: Props) => {
           onPress={() => {
             if (user) {
               if (user.linksRouteTo === "DETAILS") {
-                void SheetManager.show("link-details-sheet", {
+                SheetManager.show("link-details-sheet", {
                   payload: { link },
                 });
 

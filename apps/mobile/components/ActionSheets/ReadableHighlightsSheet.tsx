@@ -66,13 +66,13 @@ export default function ReadableHighlightsSheet(
   );
 
   const closeSheet = () => {
-    void SheetManager.hide(props.sheetId, {
+    SheetManager.hide(props.sheetId, {
       payload: null,
     });
   };
 
   const handleSelectHighlight = (highlightId: number) => {
-    void SheetManager.hide(props.sheetId, {
+    SheetManager.hide(props.sheetId, {
       payload: highlightId,
     });
   };

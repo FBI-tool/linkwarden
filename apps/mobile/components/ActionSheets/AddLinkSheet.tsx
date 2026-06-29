@@ -45,6 +45,7 @@ export default function AddLinkSheet() {
         <Input
           placeholder="e.g. https://example.com"
           className="mb-4 bg-base-100"
+          autoCapitalize="none"
           value={link}
           onChangeText={setLink}
         />

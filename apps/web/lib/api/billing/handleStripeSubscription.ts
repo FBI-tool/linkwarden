@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { prisma } from "@linkwarden/prisma";
 import stripeSDK from "./stripeSDK";
+import { stripeStoreReset } from "./stripeStoreReset";
 
 type Data = {
   id: string;
@@ -35,6 +36,8 @@ export default async function handleSubscription({
       },
       data: {
         active,
+        provider: "STRIPE",
+        ...stripeStoreReset,
         quantity,
         currentPeriodStart: new Date(periodStart * 1000),
         currentPeriodEnd: new Date(periodEnd * 1000),
@@ -75,6 +78,8 @@ export default async function handleSubscription({
         },
         create: {
           active,
+          provider: "STRIPE",
+          ...stripeStoreReset,
           stripeSubscriptionId: id,
           quantity,
           currentPeriodStart: new Date(periodStart * 1000),
@@ -87,6 +92,8 @@ export default async function handleSubscription({
         },
         update: {
           active,
+          provider: "STRIPE",
+          ...stripeStoreReset,
           stripeSubscriptionId: id,
           quantity,
           currentPeriodStart: new Date(periodStart * 1000),

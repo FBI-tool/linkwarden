@@ -393,13 +393,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      flex: 1,
-      paddingBottom: 83,
-    },
-    default: {
-      flex: 1,
-    },
-  }),
+  container: {
+    flex: 1,
+  },
 });

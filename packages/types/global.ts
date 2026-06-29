@@ -225,7 +225,10 @@ export interface WorkerStats {
 }
 
 export type GetUserByIdResponse = Omit<User, "password"> &
-  Partial<{ subscription: Pick<Subscription, "active" | "quantity"> }> & {
+  Partial<{
+    subscription: Pick<Subscription, "active" | "quantity"> &
+      Partial<Pick<Subscription, "provider">>;
+  }> & {
     parentSubscription: {
       active: boolean | undefined;
       user: {

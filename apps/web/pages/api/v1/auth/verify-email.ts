@@ -1,5 +1,6 @@
 import { prisma } from "@linkwarden/prisma";
-import updateCustomerEmail from "@/lib/api/stripe/updateCustomerEmail";
+import updateCustomerEmail from "@/lib/api/billing/updateStripeCustomerEmail";
+import updateRevenuecatCustomerEmail from "@/lib/api/billing/updateRevenuecatCustomerEmail";
 import { VerifyEmailSchema } from "@linkwarden/lib/schemaValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -71,8 +72,6 @@ export default async function verifyEmail(
       },
     });
 
-    console.log(emailInUse);
-
     if (emailInUse) {
       return res.status(400).json({
         response: "Email is already in use.",
@@ -89,7 +88,7 @@ export default async function verifyEmail(
     });
 
     // Update email in db
-    await prisma.user.update({
+    const user = await prisma.user.update({
       where: {
         email: oldEmail,
       },
@@ -97,12 +96,21 @@ export default async function verifyEmail(
         email: newEmail.toLowerCase().trim(),
         unverifiedNewEmail: null,
       },
+      include: {
+        subscriptions: true,
+      },
     });
 
-    // Apply to Stripe
-    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+    if (process.env.STRIPE_SECRET_KEY) {
+      await updateCustomerEmail(oldEmail, newEmail);
+    }
 
-    if (STRIPE_SECRET_KEY) await updateCustomerEmail(oldEmail, newEmail);
+    if (process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY) {
+      await updateRevenuecatCustomerEmail(
+        user.subscriptions?.revenueCatAppUserId ?? user.uuid,
+        newEmail
+      );
+    }
 
     // Clean up existing tokens
     await prisma.verificationToken.delete({

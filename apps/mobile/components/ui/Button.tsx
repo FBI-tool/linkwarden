@@ -17,7 +17,7 @@ const buttonVariants = cva(
         default: "bg-slate-500 text-white",
         primary: "bg-primary text-base-content",
         accent: "bg-accent border border-violet-400 text-white",
-        destructive: "bg-destructive text-white",
+        destructive: "bg-error text-white",
         outline: "border border-base-content",
         secondary: "bg-secondary text-secondary-foreground",
         input:

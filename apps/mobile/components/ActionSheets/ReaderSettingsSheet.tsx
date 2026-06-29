@@ -130,7 +130,7 @@ export default function ReaderSettingsSheet(
   const { reader, resetReader, updateReader } = useReaderStore();
 
   const closeSheet = () => {
-    void SheetManager.hide(props.sheetId);
+    SheetManager.hide(props.sheetId);
   };
 
   return (
@@ -170,7 +170,7 @@ export default function ReaderSettingsSheet(
               onValueChange={() => {
                 if (reader.readableFontFamily === option) return;
 
-                void updateReader({
+                updateReader({
                   readableFontFamily:
                     option as (typeof READER_FONT_FAMILIES)[number],
                 });
@@ -187,7 +187,7 @@ export default function ReaderSettingsSheet(
           label="Font Size"
           value={reader.readableFontSize}
           onDecrease={() =>
-            void updateReader({
+            updateReader({
               readableFontSize: moveInList(
                 READER_FONT_SIZES,
                 reader.readableFontSize,
@@ -196,7 +196,7 @@ export default function ReaderSettingsSheet(
             })
           }
           onIncrease={() =>
-            void updateReader({
+            updateReader({
               readableFontSize: moveInList(
                 READER_FONT_SIZES,
                 reader.readableFontSize,
@@ -210,7 +210,7 @@ export default function ReaderSettingsSheet(
           label="Line Height"
           value={reader.readableLineHeight}
           onDecrease={() =>
-            void updateReader({
+            updateReader({
               readableLineHeight: moveInList(
                 READER_LINE_HEIGHTS,
                 reader.readableLineHeight,
@@ -219,7 +219,7 @@ export default function ReaderSettingsSheet(
             })
           }
           onIncrease={() =>
-            void updateReader({
+            updateReader({
               readableLineHeight: moveInList(
                 READER_LINE_HEIGHTS,
                 reader.readableLineHeight,
@@ -244,7 +244,7 @@ export default function ReaderSettingsSheet(
               onValueChange={() => {
                 if (reader.readableBackgroundColor === option) return;
 
-                void updateReader({
+                updateReader({
                   readableBackgroundColor:
                     option as (typeof READER_BACKGROUND_COLORS)[number],
                 });
@@ -261,7 +261,7 @@ export default function ReaderSettingsSheet(
       <View className="px-6 pb-4 pt-2">
         <Button
           onPress={() => {
-            void resetReader();
+            resetReader();
           }}
           variant="outline"
           disabled={JSON.stringify(reader) === JSON.stringify(READER_DEFAULTS)}

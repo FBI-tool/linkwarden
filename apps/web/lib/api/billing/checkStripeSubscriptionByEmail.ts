@@ -2,7 +2,7 @@ import stripeSDK from "./stripeSDK";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
-export default async function checkSubscriptionByEmail(email: string) {
+export default async function checkStripeSubscriptionByEmail(email: string) {
   if (!STRIPE_SECRET_KEY) return null;
 
   const stripe = stripeSDK();

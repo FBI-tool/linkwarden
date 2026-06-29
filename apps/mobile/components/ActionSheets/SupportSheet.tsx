@@ -21,14 +21,14 @@ export default function SupportSheet() {
   const insets = useSafeAreaInsets();
 
   const closeSheet = () => {
-    void SheetManager.hide("support-sheet");
+    SheetManager.hide("support-sheet");
   };
 
   return (
     <ActionSheet
       gestureEnabled
       indicatorStyle={{
-        backgroundColor: rawTheme[colorScheme as ThemeName]["neutral-content"],
+        display: "none",
       }}
       containerStyle={{
         backgroundColor: rawTheme[colorScheme as ThemeName]["base-100"],
@@ -38,8 +38,8 @@ export default function SupportSheet() {
       <SheetHeader
         title="Need help?"
         onClose={closeSheet}
+        titleClassName="text-2xl"
         align="left"
-        titleClassName="text-2xl font-bold"
       />
 
       <View className="px-8 pb-5 flex-col gap-4">

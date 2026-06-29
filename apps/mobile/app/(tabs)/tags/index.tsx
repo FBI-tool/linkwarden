@@ -1,12 +1,6 @@
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Platform,
-  Text,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator } from "react-native";
 import useAuthStore from "@/store/auth";
+import EmptyState from "@/components/EmptyState";
 import TagListing from "@/components/TagListing";
 import { useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
@@ -55,9 +49,17 @@ export default function TagsScreen() {
     return tags.data.filter((tag) => tag.name.toLowerCase().includes(q));
   }, [searchQuery, tags.data]);
 
+  const refreshControl = (
+    <Spinner
+      refreshing={tags.isRefetching}
+      onRefresh={() => resetInfiniteQueryPagination(queryClient, ["tags"])}
+      progressBackgroundColor={rawTheme[colorScheme as ThemeName]["base-200"]}
+      colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
+    />
+  );
+
   return (
     <View
-      style={styles.container}
       className="h-full bg-base-100"
       collapsable={false}
       collapsableChildren={false}
@@ -67,23 +69,17 @@ export default function TagsScreen() {
           <ActivityIndicator size="large" />
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
+      ) : (filteredTags?.length ?? 0) === 0 ? (
+        <EmptyState
+          showMessage={!tags.isFetching}
+          refreshControl={refreshControl}
+        />
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={() => <></>}
           data={filteredTags}
-          refreshControl={
-            <Spinner
-              refreshing={tags.isRefetching}
-              onRefresh={() =>
-                resetInfiniteQueryPagination(queryClient, ["tags"])
-              }
-              progressBackgroundColor={
-                rawTheme[colorScheme as ThemeName]["base-200"]
-              }
-              colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
-            />
-          }
+          refreshControl={refreshControl}
           refreshing={tags.isRefetching}
           initialNumToRender={4}
           keyExtractor={(item) => item.id?.toString() || ""}
@@ -103,26 +99,8 @@ export default function TagsScreen() {
               </View>
             ) : null
           }
-          ListEmptyComponent={
-            tags.isFetching ? null : (
-              <View className="flex justify-center py-10 items-center">
-                <Text className="text-center text-xl text-neutral">
-                  Nothing found...
-                </Text>
-              </View>
-            )
-          }
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 83,
-    },
-    default: {},
-  }),
-});

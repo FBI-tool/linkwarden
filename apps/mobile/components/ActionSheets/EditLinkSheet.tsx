@@ -61,7 +61,7 @@ const Main = (props: SheetProps<"edit-link-sheet">) => {
       <SheetHeader
         title="Edit Link"
         onClose={() => {
-          void SheetManager.hide("edit-link-sheet");
+          SheetManager.hide("edit-link-sheet");
         }}
       />
 
@@ -76,6 +76,7 @@ const Main = (props: SheetProps<"edit-link-sheet">) => {
         {props.payload?.link?.url && (
           <Input
             placeholder="URL"
+            autoCapitalize="none"
             className="mb-4 bg-base-100"
             value={link?.url || ""}
             onChangeText={(text) => link?.id && setLink({ ...link, url: text })}
@@ -226,7 +227,7 @@ const Collections = () => {
       <SheetHeader
         title="Collection"
         onClose={() => {
-          void SheetManager.hide("edit-link-sheet");
+          SheetManager.hide("edit-link-sheet");
         }}
         leftSlot={
           <TouchableOpacity
@@ -379,7 +380,7 @@ const Tags = () => {
       <SheetHeader
         title="Tags"
         onClose={() => {
-          void SheetManager.hide("edit-link-sheet");
+          SheetManager.hide("edit-link-sheet");
         }}
         leftSlot={
           <TouchableOpacity

@@ -1,6 +1,6 @@
-import verifySubscription from "./stripe/verifySubscription";
+import verifySubscription from "./billing/verifySubscription";
 import { prisma } from "@linkwarden/prisma";
-import stripeSDK from "./stripe/stripeSDK";
+import stripeSDK from "./billing/stripeSDK";
 
 const REQUIRE_CC = process.env.NEXT_PUBLIC_REQUIRE_CC === "true";
 const MANAGED_PAYMENTS_ENABLED =

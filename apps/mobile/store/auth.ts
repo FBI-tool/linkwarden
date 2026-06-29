@@ -14,6 +14,7 @@ import { queryClient } from "@/lib/queryClient";
 import { mmkvPersister } from "@/lib/queryPersister";
 import { clearCache } from "@/lib/cache";
 import useDataStore from "@/store/data";
+import { markWhatsNewSeen } from "@/lib/whatsNew";
 import { useOfflineSyncStore } from "@/lib/offlineSync";
 import { hasInactiveSubscription } from "@/lib/subscription";
 import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
@@ -91,6 +92,8 @@ type AuthStore = {
 
 const cleanInstance = (instance?: string | null) =>
   (instance || cloudInstance).trim().replace(/\/+$/, "");
+
+const markWhatsNewSeenForNewUser = () => markWhatsNewSeen();
 
 const getFallbackConfig = (instance: string) =>
   instance === cloudInstance ? cloudConfig : null;
@@ -358,6 +361,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
               status: "authenticated",
             },
           });
+          markWhatsNewSeenForNewUser();
           router.replace(route);
           return true;
         } else {
@@ -399,6 +403,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
           await SecureStore.setItemAsync("TOKEN", session);
           await SecureStore.setItemAsync("INSTANCE", instance);
           set({ auth: { session, instance, status: "authenticated" } });
+          markWhatsNewSeenForNewUser();
           router.replace(route);
           return true;
         } else {
@@ -472,6 +477,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
         await SecureStore.setItemAsync("TOKEN", session);
         await SecureStore.setItemAsync("INSTANCE", instance);
         set({ auth: { session, instance, status: "authenticated" } });
+        markWhatsNewSeenForNewUser();
         router.replace(route);
       } else {
         Alert.alert("Error", data?.response || "Could not sign in with Apple.");
@@ -540,6 +546,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
         await SecureStore.setItemAsync("TOKEN", session);
         await SecureStore.setItemAsync("INSTANCE", instance);
         set({ auth: { session, instance, status: "authenticated" } });
+        markWhatsNewSeenForNewUser();
         router.replace(route);
       } else {
         Alert.alert(

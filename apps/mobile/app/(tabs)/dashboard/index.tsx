@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardData } from "@linkwarden/router/dashboardData";
 import { isAtLeastInstanceVersion, useConfig } from "@linkwarden/router/config";
 import useAuthStore from "@/store/auth";
+import { showWhatsNewIfNeeded } from "@/lib/whatsNew";
 import { DashboardSection as DashboardSectionType } from "@linkwarden/prisma/client";
 import { useUser } from "@linkwarden/router/user";
 import { useCollections } from "@linkwarden/router/collections";
@@ -25,6 +26,10 @@ const DASHBOARD_TAG_COUNT_VERSION = "2.14.0";
 export default function DashboardScreen() {
   const { auth } = useAuthStore();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (auth.status === "authenticated") showWhatsNewIfNeeded();
+  }, [auth.status]);
   const {
     data: {
       links = [],

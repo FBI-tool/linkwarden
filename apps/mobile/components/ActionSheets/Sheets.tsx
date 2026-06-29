@@ -17,6 +17,7 @@ import LoginSheet from "./LoginSheet";
 import SignUpSheet from "./SignUpSheet";
 import SelfHostedServerSheet from "./SelfHostedServerSheet";
 import DeleteAccountSheet from "./DeleteAccountSheet";
+import WhatsNewSheet from "./WhatsNewSheet";
 import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/global";
 
 registerSheet("support-sheet", SupportSheet);
@@ -31,6 +32,7 @@ registerSheet("readable-highlight-sheet", ReadableHighlightSheet);
 registerSheet("readable-highlights-sheet", ReadableHighlightsSheet);
 registerSheet("reader-settings-sheet", ReaderSettingsSheet);
 registerSheet("delete-account-sheet", DeleteAccountSheet);
+registerSheet("whats-new-sheet", WhatsNewSheet);
 
 declare module "react-native-actions-sheet" {
   interface Sheets {
@@ -74,6 +76,7 @@ declare module "react-native-actions-sheet" {
     }>;
     "reader-settings-sheet": SheetDefinition;
     "delete-account-sheet": SheetDefinition;
+    "whats-new-sheet": SheetDefinition;
   }
 }
 

@@ -12,6 +12,7 @@ import getSuffixFromFormat from "@/lib/shared/getSuffixFromFormat";
 import setCollection from "@/lib/api/setCollection";
 import fetchTitleAndHeaders from "@/lib/shared/fetchTitleAndHeaders";
 import { isUrlSafeForServerSideFetch } from "@linkwarden/lib/ssrf";
+import { ArchivedFormat } from "@linkwarden/types/global";
 
 export const config = {
   api: {
@@ -84,6 +85,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(401).json({ response: "Missing format" });
   }
 
+  if (format === ArchivedFormat.readability) {
+    return res
+      .status(400)
+      .json({ response: "This format cannot be uploaded." });
+  }
+
   // Verify user and collection permissions
   const user = await verifyUser({ req, res });
   if (!user) return; // verifyUser already handles the response on failure
@@ -128,14 +135,15 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
         throw new Error(`Error: ${issue.message} [${issue.path.join(", ")}]`);
       }
 
-      // Check file type and size
-      const allowedMIMETypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpg",
-        "image/jpeg",
-        "text/html",
-      ];
+      // Check file type and size.
+      const allowedMIMETypesByFormat: Record<number, string[]> = {
+        [ArchivedFormat.png]: ["image/png"],
+        [ArchivedFormat.jpeg]: ["image/jpg", "image/jpeg"],
+        [ArchivedFormat.pdf]: ["application/pdf"],
+        [ArchivedFormat.monolith]: ["text/html"],
+      };
+
+      const allowedMIMETypes = allowedMIMETypesByFormat[format] ?? [];
 
       const fileBuffer = validateFile(
         files.file[0],
@@ -157,12 +165,13 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       const isImage = mimetype?.includes("image");
       const isHTML = mimetype === "text/html";
 
-      const { title = "" } = url && (shouldFetchUrl || isHTML)
-        ? await fetchTitleAndHeaders(
-            url,
-            isHTML && !isPreview ? fileBuffer.toString("utf-8") : undefined
-          )
-        : {};
+      const { title = "" } =
+        url && (shouldFetchUrl || isHTML)
+          ? await fetchTitleAndHeaders(
+              url,
+              isHTML && !isPreview ? fileBuffer.toString("utf-8") : undefined
+            )
+          : {};
 
       const link = await prisma.link.create({
         data: {

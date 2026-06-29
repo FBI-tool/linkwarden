@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import DOMPurify from "dompurify";
 import { PreservationSkeleton } from "../Skeletons";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
@@ -69,7 +70,7 @@ export default function ReadableView({ link }: Props) {
         );
         const data = await response.json();
 
-        setLinkContent(data?.content ?? "");
+        setLinkContent(DOMPurify.sanitize(data?.content ?? ""));
       }
     }
     fetchLinkContent();
@@ -302,16 +303,35 @@ export default function ReadableView({ link }: Props) {
       } else return user.readableFontFamily;
     };
 
-    const pFontSize = user.readableFontSize || `${READER_VIEW_DEFAULTS.fontSize}px`;
+    const pFontSize =
+      user.readableFontSize || `${READER_VIEW_DEFAULTS.fontSize}px`;
     const ratio = parseInt(pFontSize) / READER_VIEW_DEFAULTS.fontSize;
 
     container.style.setProperty("--rv-p-font-size", pFontSize);
-    container.style.setProperty("--rv-p-line-height", user.readableLineHeight || String(READER_VIEW_DEFAULTS.lineHeight));
-    container.style.setProperty("--rv-h1-font-size", READER_VIEW_DEFAULTS.h1Size * ratio + "px");
-    container.style.setProperty("--rv-h2-font-size", READER_VIEW_DEFAULTS.h2Size * ratio + "px");
-    container.style.setProperty("--rv-h3-font-size", READER_VIEW_DEFAULTS.h3Size * ratio + "px");
-    container.style.setProperty("--rv-h4-font-size", READER_VIEW_DEFAULTS.h4Size * ratio + "px");
-    container.style.setProperty("--rv-h5-font-size", READER_VIEW_DEFAULTS.h5Size * ratio + "px");
+    container.style.setProperty(
+      "--rv-p-line-height",
+      user.readableLineHeight || String(READER_VIEW_DEFAULTS.lineHeight)
+    );
+    container.style.setProperty(
+      "--rv-h1-font-size",
+      READER_VIEW_DEFAULTS.h1Size * ratio + "px"
+    );
+    container.style.setProperty(
+      "--rv-h2-font-size",
+      READER_VIEW_DEFAULTS.h2Size * ratio + "px"
+    );
+    container.style.setProperty(
+      "--rv-h3-font-size",
+      READER_VIEW_DEFAULTS.h3Size * ratio + "px"
+    );
+    container.style.setProperty(
+      "--rv-h4-font-size",
+      READER_VIEW_DEFAULTS.h4Size * ratio + "px"
+    );
+    container.style.setProperty(
+      "--rv-h5-font-size",
+      READER_VIEW_DEFAULTS.h5Size * ratio + "px"
+    );
     container.style.fontFamily = `${getFont()}`;
   }, [
     user?.theme,
@@ -400,202 +420,202 @@ export default function ReadableView({ link }: Props) {
       <div
         ref={containerRef}
         className={clsx(
-        "flex flex-col gap-3 items-start p-3 mx-auto bg-base-200 mt-5 relative",
-        user?.readableLineWidth === "narrower"
-          ? "max-w-screen-sm"
-          : user?.readableLineWidth === "narrow"
-            ? "max-w-screen-md"
-            : user?.readableLineWidth === "normal"
-              ? "max-w-screen-lg"
-              : user?.readableLineWidth === "wide"
-                ? "max-w-screen-xl"
-                : user?.readableLineWidth === "wider"
-                  ? "max-w-screen-2xl"
-                  : ""
-      )}
-    >
-      <div className="reader-view">
-        <h1>
-          {unescapeString(link?.name || link?.description || link?.url || "")}
-        </h1>
-      </div>
+          "flex flex-col gap-3 items-start p-3 mx-auto bg-base-200 mt-5 relative",
+          user?.readableLineWidth === "narrower"
+            ? "max-w-screen-sm"
+            : user?.readableLineWidth === "narrow"
+              ? "max-w-screen-md"
+              : user?.readableLineWidth === "normal"
+                ? "max-w-screen-lg"
+                : user?.readableLineWidth === "wide"
+                  ? "max-w-screen-xl"
+                  : user?.readableLineWidth === "wider"
+                    ? "max-w-screen-2xl"
+                    : ""
+        )}
+      >
+        <div className="reader-view">
+          <h1>
+            {unescapeString(link?.name || link?.description || link?.url || "")}
+          </h1>
+        </div>
 
-      {link?.url && (
-        <Link
-          href={link?.url || ""}
-          title={link?.url}
-          target="_blank"
-          className="hover:opacity-60 duration-100 break-all text-sm flex items-center gap-1 text-neutral w-fit"
-        >
-          <i className="bi-link-45deg" />
-          {isValidUrl(link?.url || "") && new URL(link?.url as string).host}
-        </Link>
-      )}
+        {link?.url && (
+          <Link
+            href={link?.url || ""}
+            title={link?.url}
+            target="_blank"
+            className="hover:opacity-60 duration-100 break-all text-sm flex items-center gap-1 text-neutral w-fit"
+          >
+            <i className="bi-link-45deg" />
+            {isValidUrl(link?.url || "") && new URL(link?.url as string).host}
+          </Link>
+        )}
 
-      <div className="text-sm text-neutral flex justify-between w-full gap-2">
-        <LinkDate link={link} />
-      </div>
+        <div className="text-sm text-neutral flex justify-between w-full gap-2">
+          <LinkDate link={link} />
+        </div>
 
-      <Separator className="mt-5 mb-2" />
+        <Separator className="mt-5 mb-2" />
 
-      {link?.readable?.startsWith("archives") ? (
-        <>
-          {linkContent ? (
-            <div
-              className={clsx("p-3 rounded-md w-full bg-base-200")}
-              onMouseUp={handleMouseUp}
-            >
+        {link?.readable?.startsWith("archives") ? (
+          <>
+            {linkContent ? (
               <div
-                id="readable-view"
-                className="line-break px-1 reader-view read-only"
-                style={{ contentVisibility: "auto" }}
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
+                className={clsx("p-3 rounded-md w-full bg-base-200")}
+                onMouseUp={handleMouseUp}
+              >
+                <div
+                  id="readable-view"
+                  className="line-break px-1 reader-view read-only"
+                  style={{ contentVisibility: "auto" }}
+                  dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                />
 
-              {menuOpen &&
-                !isPublicRoute &&
-                (permissions === true || permissions?.canUpdate) && (
-                  <ClickAwayHandler
-                    onClickOutside={handleMenuClickOutside}
-                    className="absolute bg-base-100 p-2 z-[9999] 
+                {menuOpen &&
+                  !isPublicRoute &&
+                  (permissions === true || permissions?.canUpdate) && (
+                    <ClickAwayHandler
+                      onClickOutside={handleMenuClickOutside}
+                      className="absolute bg-base-100 p-2 z-[9999] 
                                whitespace-nowrap -translate-x-1/2 
                                -translate-y-full rounded-lg shadow-md border border-neutral-content"
-                    style={{
-                      left: menuPosition.x,
-                      top: menuPosition.y,
-                    }}
-                  >
-                    {isCommenting ? (
-                      <div>
-                        <textarea
-                          value={selectionInfo?.comment}
-                          onChange={(e) => {
-                            if (selectionInfo)
-                              setSelectionInfo({
-                                ...selectionInfo,
-                                comment: e.target.value,
-                              });
-                          }}
-                          placeholder={t("link_description_placeholder")}
-                          className="resize-none w-52 rounded-md p-2 h-32 border-neutral-content bg-base-200 focus:border-primary border-solid border outline-none duration-100"
-                        />
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setIsCommenting(false);
+                      style={{
+                        left: menuPosition.x,
+                        top: menuPosition.y,
+                      }}
+                    >
+                      {isCommenting ? (
+                        <div>
+                          <textarea
+                            value={selectionInfo?.comment}
+                            onChange={(e) => {
                               if (selectionInfo)
                                 setSelectionInfo({
                                   ...selectionInfo,
-                                  comment: "",
+                                  comment: e.target.value,
                                 });
                             }}
-                          >
-                            {t("cancel")}
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => {
-                              handleHighlightSelection(
-                                selectionInfo?.highlightId
-                              );
-                              setIsCommenting(false);
-                              if (selectionInfo)
-                                setSelectionInfo({
-                                  ...selectionInfo,
-                                  comment: "",
-                                });
-                            }}
-                          >
-                            {t("save")}
-                          </Button>
+                            placeholder={t("link_description_placeholder")}
+                            className="resize-none w-52 rounded-md p-2 h-32 border-neutral-content bg-base-200 focus:border-primary border-solid border outline-none duration-100"
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setIsCommenting(false);
+                                if (selectionInfo)
+                                  setSelectionInfo({
+                                    ...selectionInfo,
+                                    comment: "",
+                                  });
+                              }}
+                            >
+                              {t("cancel")}
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => {
+                                handleHighlightSelection(
+                                  selectionInfo?.highlightId
+                                );
+                                setIsCommenting(false);
+                                if (selectionInfo)
+                                  setSelectionInfo({
+                                    ...selectionInfo,
+                                    comment: "",
+                                  });
+                              }}
+                            >
+                              {t("save")}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 justify-between select-none">
-                        {["yellow", "red", "blue", "green"].map((color) => (
-                          <button
-                            key={color}
-                            onClick={() =>
-                              handleHighlightSelection(
-                                selectionInfo?.highlightId,
-                                color as "yellow" | "red" | "blue" | "green"
-                              )
-                            }
-                            className={`w-5 h-5 rounded-full ${
-                              color === "yellow"
-                                ? "bg-yellow-300"
-                                : color === "red"
-                                  ? "bg-red-500"
-                                  : color === "blue"
-                                    ? "bg-blue-500"
-                                    : "bg-green-500"
-                            } hover:opacity-70 duration-100 relative`}
-                            title={`${
-                              color.charAt(0).toUpperCase() + color.slice(1)
-                            } Highlight`}
-                          >
-                            {selectionInfo?.highlightId &&
-                              linkHighlights?.find(
-                                (h) => h.id === selectionInfo.highlightId
-                              )?.color === color && (
-                                <i className="bi-check2 text-sm text-black absolute inset-0 flex items-center justify-center" />
-                              )}
-                          </button>
-                        ))}
+                      ) : (
+                        <div className="flex items-center gap-3 justify-between select-none">
+                          {["yellow", "red", "blue", "green"].map((color) => (
+                            <button
+                              key={color}
+                              onClick={() =>
+                                handleHighlightSelection(
+                                  selectionInfo?.highlightId,
+                                  color as "yellow" | "red" | "blue" | "green"
+                                )
+                              }
+                              className={`w-5 h-5 rounded-full ${
+                                color === "yellow"
+                                  ? "bg-yellow-300"
+                                  : color === "red"
+                                    ? "bg-red-500"
+                                    : color === "blue"
+                                      ? "bg-blue-500"
+                                      : "bg-green-500"
+                              } hover:opacity-70 duration-100 relative`}
+                              title={`${
+                                color.charAt(0).toUpperCase() + color.slice(1)
+                              } Highlight`}
+                            >
+                              {selectionInfo?.highlightId &&
+                                linkHighlights?.find(
+                                  (h) => h.id === selectionInfo.highlightId
+                                )?.color === color && (
+                                  <i className="bi-check2 text-sm text-black absolute inset-0 flex items-center justify-center" />
+                                )}
+                            </button>
+                          ))}
 
-                        <button
-                          className="hover:opacity-70 duration-100"
-                          onClick={() => setIsCommenting(true)}
-                        >
-                          <i className="bi-chat-text" />
-                        </button>
-
-                        {selectionInfo?.highlightId && (
                           <button
-                            onClick={() => {
-                              deleteHighlight.mutate(
-                                selectionInfo.highlightId as number
-                              );
-                              setSelectionInfo(null);
-                            }}
                             className="hover:opacity-70 duration-100"
-                            title="Delete"
+                            onClick={() => setIsCommenting(true)}
                           >
-                            <i className="bi-trash" />
+                            <i className="bi-chat-text" />
                           </button>
-                        )}
-                      </div>
-                    )}
-                  </ClickAwayHandler>
-                )}
-            </div>
-          ) : (
-            <PreservationSkeleton className="h-fit" />
-          )}
-        </>
-      ) : (
-        <div className={`w-full h-full flex flex-col justify-center`}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            fill="currentColor"
-            className="w-1/4 min-w-[7rem] max-w-[15rem] h-auto mx-auto mb-5"
-            viewBox="0 0 16 16"
-          >
-            <path d="m14.12 10.163 1.715.858c.22.11.22.424 0 .534L8.267 15.34a.598.598 0 0 1-.534 0L.165 11.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66zM7.733.063a.598.598 0 0 1 .534 0l7.568 3.784a.3.3 0 0 1 0 .535L8.267 8.165a.598.598 0 0 1-.534 0L.165 4.382a.299.299 0 0 1 0-.535L7.733.063z" />
-            <path d="m14.12 6.576 1.715.858c.22.11.22.424 0 .534l-7.568 3.784a.598.598 0 0 1-.534 0L.165 7.968a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.659z" />
-          </svg>
-          <p className="text-center text-xl">
-            {t("link_preservation_in_queue")}
-          </p>
-          <p className="text-center text-lg mt-2">{t("check_back_later")}</p>
-        </div>
-      )}
-    </div>
+
+                          {selectionInfo?.highlightId && (
+                            <button
+                              onClick={() => {
+                                deleteHighlight.mutate(
+                                  selectionInfo.highlightId as number
+                                );
+                                setSelectionInfo(null);
+                              }}
+                              className="hover:opacity-70 duration-100"
+                              title="Delete"
+                            >
+                              <i className="bi-trash" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </ClickAwayHandler>
+                  )}
+              </div>
+            ) : (
+              <PreservationSkeleton className="h-fit" />
+            )}
+          </>
+        ) : (
+          <div className={`w-full h-full flex flex-col justify-center`}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              fill="currentColor"
+              className="w-1/4 min-w-[7rem] max-w-[15rem] h-auto mx-auto mb-5"
+              viewBox="0 0 16 16"
+            >
+              <path d="m14.12 10.163 1.715.858c.22.11.22.424 0 .534L8.267 15.34a.598.598 0 0 1-.534 0L.165 11.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66zM7.733.063a.598.598 0 0 1 .534 0l7.568 3.784a.3.3 0 0 1 0 .535L8.267 8.165a.598.598 0 0 1-.534 0L.165 4.382a.299.299 0 0 1 0-.535L7.733.063z" />
+              <path d="m14.12 6.576 1.715.858c.22.11.22.424 0 .534l-7.568 3.784a.598.598 0 0 1-.534 0L.165 7.968a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.659z" />
+            </svg>
+            <p className="text-center text-xl">
+              {t("link_preservation_in_queue")}
+            </p>
+            <p className="text-center text-lg mt-2">{t("check_back_later")}</p>
+          </div>
+        )}
+      </div>
     </>
   );
 }

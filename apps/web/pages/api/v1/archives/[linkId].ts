@@ -144,6 +144,12 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(401).json({ response: "Invalid parameters." });
   }
 
+  if (format === ArchivedFormat.readability) {
+    return res
+      .status(400)
+      .json({ response: "This format cannot be uploaded." });
+  }
+
   // Verify user and collection permissions
   const user = await verifyUser({ req, res });
   if (!user) return; // verifyUser already handles the response on failure
@@ -216,13 +222,14 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // Check file type and size
-      const allowedMIMETypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpg",
-        "image/jpeg",
-        "text/html",
-      ];
+      const allowedMIMETypesByFormat: Record<number, string[]> = {
+        [ArchivedFormat.png]: ["image/png"],
+        [ArchivedFormat.jpeg]: ["image/jpg", "image/jpeg"],
+        [ArchivedFormat.pdf]: ["application/pdf"],
+        [ArchivedFormat.monolith]: ["text/html"],
+      };
+
+      const allowedMIMETypes = allowedMIMETypesByFormat[format] ?? [];
 
       const fileBuffer = validateFile(
         files.file[0],

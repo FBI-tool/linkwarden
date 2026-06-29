@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { createFile } from "@linkwarden/filesystem";
 import { prisma } from "@linkwarden/prisma";
 import { Link } from "@linkwarden/prisma/client";
+import sanitizeHtmlForMonolith from "./sanitizeHtmlForMonolith";
 
 export default async function handleMonolith(
   link: Link,
@@ -9,6 +10,8 @@ export default async function handleMonolith(
   signal: AbortSignal
 ): Promise<void> {
   if (!link.url) return;
+
+  const pageContent = await sanitizeHtmlForMonolith(htmlFromPage, link.url);
 
   return new Promise<void>((resolve, reject) => {
     const args = [
@@ -29,7 +32,7 @@ export default async function handleMonolith(
       killSignal: "SIGKILL",
     });
 
-    child.stdin.write(htmlFromPage);
+    child.stdin.write(pageContent);
     child.stdin.end();
 
     const chunks: Buffer[] = [];

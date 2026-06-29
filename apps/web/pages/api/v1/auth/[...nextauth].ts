@@ -4,6 +4,7 @@ import sendVerificationRequest from "@/lib/api/sendVerificationRequest";
 import updateSeats from "@/lib/api/billing/updateSeats";
 import verifySubscription from "@/lib/api/billing/verifySubscription";
 import { getAppleClientId, getAppleClientSecret } from "@/lib/api/apple";
+import { ssoEmailVerified } from "@/lib/api/ssoEmailVerified";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { User } from "@linkwarden/prisma/client";
 import bcrypt from "bcrypt";
@@ -1339,7 +1340,7 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
       },
     },
     callbacks: {
-      async signIn({ user, account, email }) {
+      async signIn({ user, account, email, profile }) {
         if (!(user as User).emailVerified && !email?.verificationRequest) {
           const parentSubscriptionId = (user as User).parentSubscriptionId;
 
@@ -1405,6 +1406,10 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             });
 
             if (findUser && findUser.accounts.length === 0) {
+              if (!ssoEmailVerified(profile)) {
+                return false;
+              }
+
               await prisma.account.create({
                 data: {
                   userId: findUser.id,

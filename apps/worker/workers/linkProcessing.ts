@@ -9,17 +9,16 @@ import { Browser } from "playwright";
 const ARCHIVE_TAKE_COUNT = Number(process.env.ARCHIVE_TAKE_COUNT || "") || 5;
 const BROWSER_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
-// On-demand mode: launch browser only when links need processing, close when
-// idle. Dramatically reduces memory usage on instances with sporadic traffic.
-// Default ("persistent") preserves existing always-on behavior.
 const BROWSER_LIFECYCLE = (
-  process.env.BROWSER_LIFECYCLE || "persistent"
+  process.env.BROWSER_LIFECYCLE || "on-demand"
 ).toLowerCase();
-const BROWSER_IDLE_TIMEOUT_MS =
-  Number(process.env.BROWSER_IDLE_TIMEOUT_MS || "") || 60_000; // 1 minute
+const BROWSER_IDLE_TIMEOUT_MS = 60_000;
+
+// Blue console output
+const logInfo = (message: string) => console.log("\x1b[34m%s\x1b[0m", message);
 
 export async function linkProcessing(interval = 10) {
-  console.log("\x1b[34m%s\x1b[0m", "Starting link processing...");
+  logInfo("Starting link processing...");
 
   if (BROWSER_LIFECYCLE === "on-demand") {
     await linkProcessingOnDemand(interval);
@@ -28,7 +27,44 @@ export async function linkProcessing(interval = 10) {
   }
 }
 
-// ── Persistent mode (existing behavior) ─────────────────────────────────────
+// Archive a batch of links concurrently, then report how many remain.
+async function processBatch(
+  links: LinkWithCollectionOwnerAndTags[],
+  browser: Browser,
+  onDisconnect: () => void | Promise<void>
+) {
+  await Promise.allSettled(
+    links.map(async (link) => {
+      try {
+        logInfo(`- Link ${link.url} for user ${link.collection.ownerId}`);
+
+        await archiveHandler(link, browser);
+
+        logInfo(
+          `Succeeded processing link ${link.url} for user ${link.collection.ownerId}.`
+        );
+      } catch (error: any) {
+        console.error(
+          "\x1b[34m%s\x1b[0m",
+          `Error processing link ${link.url} for user ${link.collection.ownerId}:`,
+          error
+        );
+
+        if (!browser.isConnected?.()) {
+          await onDisconnect();
+        }
+      }
+    })
+  );
+
+  const unprocessedLinkCount = await countUnprocessedBillableLinks();
+
+  logInfo(
+    `Processed ${links.length} link${
+      links.length === 1 ? "" : "s"
+    }, ${unprocessedLinkCount} left.`
+  );
+}
 
 async function linkProcessingPersistent(interval: number) {
   let browser = await launchBrowser();
@@ -40,7 +76,7 @@ async function linkProcessingPersistent(interval: number) {
         await browser.close();
       }
     } catch {}
-    console.log("\x1b[34m%s\x1b[0m", `Restarting main browser (${reason})...`);
+    logInfo(`Restarting main browser (${reason})...`);
     browser = await launchBrowser();
     browserStartTs = Date.now();
   };
@@ -59,57 +95,13 @@ async function linkProcessingPersistent(interval: number) {
       continue;
     }
 
-    const archiveLink = async (link: LinkWithCollectionOwnerAndTags) => {
-      try {
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `- Link ${link.url} for user ${link.collection.ownerId}`
-        );
-
-        await archiveHandler(link, browser);
-
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `Succeeded processing link ${link.url} for user ${link.collection.ownerId}.`
-        );
-      } catch (error: any) {
-        console.error(
-          "\x1b[34m%s\x1b[0m",
-          `Error processing link ${link.url} for user ${link.collection.ownerId}:`,
-          error
-        );
-
-        if (!browser.isConnected?.()) {
-          await restartBrowser("browser disconnected");
-        }
-      }
-    };
-
-    const processingPromises = links.map((e) => archiveLink(e));
-    await Promise.allSettled(processingPromises);
-
-    const unprocessedLinkCount = await countUnprocessedBillableLinks();
-
-    console.log(
-      "\x1b[34m%s\x1b[0m",
-      `Processed ${links.length} link${
-        links.length === 1 ? "" : "s"
-      }, ${unprocessedLinkCount} left.`
+    await processBatch(links, browser, () =>
+      restartBrowser("browser disconnected")
     );
 
     await delay(interval);
   }
 }
-
-// ── On-demand mode ──────────────────────────────────────────────────────────
-//
-// Browser lifecycle:
-//   idle (no browser) → links found → launch browser → process all queued
-//   links → start idle timer → if no new links within BROWSER_IDLE_TIMEOUT_MS
-//   → close browser → back to idle
-//
-// This avoids launching/closing Chromium for every single link while still
-// freeing ~300-800 MB of RAM when the instance is idle.
 
 async function linkProcessingOnDemand(interval: number) {
   let browser: Browser | null = null;
@@ -118,20 +110,15 @@ async function linkProcessingOnDemand(interval: number) {
 
   const ensureBrowser = async (): Promise<Browser> => {
     if (browser && browser.isConnected()) {
-      // Rotate if the browser has been alive too long (same leak prevention
-      // as persistent mode).
       if (Date.now() - browserStartTs >= BROWSER_MAX_AGE_MS) {
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          "Rotating on-demand browser (30-minute max age)..."
-        );
+        logInfo("Rotating on-demand browser (30-minute max age)...");
         await closeBrowser();
       } else {
         return browser;
       }
     }
 
-    console.log("\x1b[34m%s\x1b[0m", "Launching browser on demand...");
+    logInfo("Launching browser.");
     browser = await launchBrowser();
     browserStartTs = Date.now();
     return browser;
@@ -146,10 +133,7 @@ async function linkProcessingOnDemand(interval: number) {
     } catch {}
     browser = null;
     browserStartTs = 0;
-    console.log(
-      "\x1b[34m%s\x1b[0m",
-      "Browser closed (on-demand idle shutdown)."
-    );
+    logInfo("Browser closed.");
   };
 
   while (true) {
@@ -158,7 +142,6 @@ async function linkProcessingOnDemand(interval: number) {
     });
 
     if (links.length === 0) {
-      // No work — close the browser if idle timeout has elapsed.
       if (
         browser &&
         lastActivityTs > 0 &&
@@ -171,52 +154,16 @@ async function linkProcessingOnDemand(interval: number) {
       continue;
     }
 
-    // Work available — ensure browser is running.
     const activeBrowser = await ensureBrowser();
     lastActivityTs = Date.now();
 
-    const archiveLink = async (link: LinkWithCollectionOwnerAndTags) => {
-      try {
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `- Link ${link.url} for user ${link.collection.ownerId}`
-        );
-
-        await archiveHandler(link, activeBrowser);
-
-        console.log(
-          "\x1b[34m%s\x1b[0m",
-          `Succeeded processing link ${link.url} for user ${link.collection.ownerId}.`
-        );
-      } catch (error: any) {
-        console.error(
-          "\x1b[34m%s\x1b[0m",
-          `Error processing link ${link.url} for user ${link.collection.ownerId}:`,
-          error
-        );
-
-        if (!activeBrowser.isConnected?.()) {
-          console.log(
-            "\x1b[34m%s\x1b[0m",
-            "Browser disconnected during processing, will relaunch on next batch."
-          );
-          browser = null;
-          browserStartTs = 0;
-        }
-      }
-    };
-
-    const processingPromises = links.map((e) => archiveLink(e));
-    await Promise.allSettled(processingPromises);
-
-    const unprocessedLinkCount = await countUnprocessedBillableLinks();
-
-    console.log(
-      "\x1b[34m%s\x1b[0m",
-      `Processed ${links.length} link${
-        links.length === 1 ? "" : "s"
-      }, ${unprocessedLinkCount} left.`
-    );
+    await processBatch(links, activeBrowser, () => {
+      logInfo(
+        "Browser disconnected during processing, will relaunch on next batch."
+      );
+      browser = null;
+      browserStartTs = 0;
+    });
 
     await delay(interval);
   }

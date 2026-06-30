@@ -35,10 +35,6 @@ export default async function getCollection(userId: number) {
           },
         },
       },
-      orderBy: [
-        { createdAt: "asc" },
-        { id: "asc" },
-      ],
     }),
   ]);
 

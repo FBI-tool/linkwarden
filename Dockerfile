@@ -53,4 +53,4 @@ HEALTHCHECK --interval=30s \
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "yarn workspace @linkwarden/prisma deploy && npx concurrently \"yarn workspace @linkwarden/web start\" \"yarn workspace @linkwarden/worker start\""]
+CMD ["sh", "-c", "export PATH=/data/node_modules/.bin:$PATH && prisma migrate deploy --schema=/data/packages/prisma/schema.prisma && exec concurrently -k -n web,worker \"cd /data/apps/web && exec next start\" \"cd /data/apps/worker && exec tsx worker.ts\""]

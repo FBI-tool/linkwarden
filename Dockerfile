@@ -1,49 +1,86 @@
-# Stage: monolith-builder
-# Purpose: Uses the Rust image to build monolith
-# Notes:
-#  - Fine to leave extra here, as only the resulting binary is copied out
+# ==============================================================================
+# Stage 1: Monolith Builder
+# ==============================================================================
 FROM docker.io/rust:1.86-bullseye AS monolith-builder
-
 RUN set -eux && cargo install --locked monolith
 
-# Stage: main-app
-# Purpose: Compiles the frontend and
-# Notes:
-#  - Nothing extra should be left here.  All commands should cleanup
-FROM node:20.19.6-bullseye-slim AS main-app
+# ==============================================================================
+# Stage 2: App Builder (Where the heavy building happens)
+# ==============================================================================
+FROM node:20.19.6-bullseye-slim AS app-builder
 
 ENV YARN_HTTP_TIMEOUT=10000000
-
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-
 ENV PRISMA_HIDE_UPDATE_MESSAGE=1
-
-ARG DEBIAN_FRONTEND=noninteractive
-
+# The web postinstall runs `playwright install`; skip it here since the browser
+# is installed in the final stage. Avoids downloading a browser we then discard.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 WORKDIR /data
 
 RUN corepack enable
 
-# Copy the compiled monolith binary from the builder stage
+# Copy only structure first for optimized caching
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/filesystem/package.json ./packages/filesystem/
+COPY packages/lib/package.json ./packages/lib/
+COPY packages/prisma/package.json ./packages/prisma/
+COPY packages/router/package.json ./packages/router/
+COPY packages/types/package.json ./packages/types/
+
+# Install everything needed to build
+RUN --mount=type=cache,sharing=locked,target=/root/.yarn/berry/cache \
+    yarn workspaces focus linkwarden @linkwarden/web @linkwarden/worker
+
+# Copy source and build
+COPY . .
+RUN yarn prisma:generate && \
+    yarn web:build
+
+# Clean up dev dependencies right here before copying to the final stage
+RUN yarn workspaces focus --production linkwarden @linkwarden/web @linkwarden/worker && \
+    rm -rf apps/web/.next/cache && \
+    yarn cache clean
+
+# ==============================================================================
+# Stage 3: Final Runtime (This stage will be ~400MB total)
+# ==============================================================================
+FROM node:20.19.6-bullseye-slim AS main-app
+ENV NODE_ENV=production
+ENV PRISMA_HIDE_UPDATE_MESSAGE=1
+# Stable, copyable browser location shared by install and runtime
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /data
+
+# Copy the Rust monolith binary
 COPY --from=monolith-builder /usr/local/cargo/bin/monolith /usr/local/bin/monolith
 
-# Install curl for healthcheck, and ca-certificates to prevent monolith from failing to retrieve resources due to invalid certificates
+# Install minimal runtime system utilities
+# procps provides `ps`, which concurrently -k needs to manage child processes
 RUN set -eux && \
     apt-get update && \
-    apt-get install -yqq --no-install-recommends curl ca-certificates && \
+    apt-get install -yqq --no-install-recommends curl ca-certificates openssl procps && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+# Copy ONLY the clean production assets from Stage 2
+COPY --from=app-builder /data/node_modules ./node_modules
+COPY --from=app-builder /data/package.json ./package.json
+COPY --from=app-builder /data/apps/web ./apps/web
+COPY --from=app-builder /data/apps/worker ./apps/worker
+COPY --from=app-builder /data/packages ./packages
 
-# Install deps, build, prune devDependencies
-RUN --mount=type=cache,sharing=locked,target=/root/.yarn/berry/cache set -eux && \
-    yarn workspaces focus linkwarden @linkwarden/web @linkwarden/worker && \
-    yarn prisma:generate && \
-    yarn web:build && \
-    yarn workspaces focus --production linkwarden @linkwarden/web @linkwarden/worker && \
-    rm -rf apps/web/.next/cache && \
-    yarn cache clean
+# Install only the Chromium headless shell (Playwright's smallest browser) plus
+# the shared libraries it needs at runtime. Full Chromium is not required.
+RUN set -eux && \
+    export PATH=/data/node_modules/.bin:$PATH && \
+    apt-get update && \
+    playwright install --with-deps chromium-headless-shell && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 HEALTHCHECK --interval=30s \
             --timeout=5s \

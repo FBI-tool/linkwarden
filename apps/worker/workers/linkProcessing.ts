@@ -140,6 +140,7 @@ async function linkProcessingOnDemand(interval: number) {
   while (true) {
     const links = await getLinkBatchFairly({
       maxBatchLinks: ARCHIVE_TAKE_COUNT,
+      mode: "links",
     });
 
     if (links.length === 0) {

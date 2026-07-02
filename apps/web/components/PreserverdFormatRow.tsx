@@ -26,7 +26,7 @@ export default function PreservedFormatRow({
   const router = useRouter();
   const { data: config, isLoading: isConfigLoading } = useConfig();
 
-  const isPublic = router.pathname.startsWith("/public") ? true : undefined;
+  const isPublic = router.pathname.startsWith("/public");
   const isMonolithConfigPending =
     format === ArchivedFormat.monolith && isConfigLoading && !config;
 

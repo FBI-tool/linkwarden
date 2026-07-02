@@ -1,6 +1,6 @@
 import getTags from "@/lib/api/controllers/tags/getTags";
 import { prisma } from "@linkwarden/prisma";
-import { LinkRequestQuery } from "@linkwarden/types";
+import { TagRequestQuery } from "@linkwarden/types/global";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function collections(
@@ -8,15 +8,15 @@ export default async function collections(
   res: NextApiResponse
 ) {
   if (req.method === "GET") {
-    // Convert the type of the request query to "LinkRequestQuery"
-    const convertedData: LinkRequestQuery = {
-      sort: Number(req.query.sort as string),
-      collectionId: req.query.collectionId
-        ? Number(req.query.collectionId as string)
-        : undefined,
+    const collectionId = req.query.collectionId
+      ? Number(req.query.collectionId as string)
+      : undefined;
+    const convertedData: TagRequestQuery = {
+      search:
+        typeof req.query.search === "string" ? req.query.search : undefined,
     };
 
-    if (!convertedData.collectionId) {
+    if (!collectionId) {
       return res
         .status(400)
         .json({ response: "Please choose a valid collection." });
@@ -24,7 +24,7 @@ export default async function collections(
 
     const collection = await prisma.collection.findFirst({
       where: {
-        id: convertedData.collectionId,
+        id: collectionId,
         isPublic: true,
       },
     });
@@ -35,8 +35,11 @@ export default async function collections(
 
     const tags = await getTags({
       collectionId: collection.id,
+      query: convertedData,
     });
 
-    return res.status(tags?.status || 500).json({ response: tags?.response });
+    const { statusCode, ...data } = tags;
+
+    return res.status(statusCode).json(data);
   }
 }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import CreatableSelect from "react-select/creatable";
+import { InputActionMeta } from "react-select";
 import { styles } from "./styles";
 import { ArchivalTagOption, Option } from "@linkwarden/types/inputSelect";
 import { useTags } from "@linkwarden/router/tags";
 import { useTranslation } from "next-i18next";
+import { TagSort } from "@linkwarden/types/global";
 
 type Props = {
   onChange: (e: any) => void;
@@ -25,7 +27,16 @@ export default function TagSelection({
   autoFocus,
   onBlur,
 }: Props) {
-  const { data: tags = [] } = useTags();
+  const [searchQuery, setSearchQuery] = useState("");
+  const {
+    data: tags = [],
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useTags(undefined, {
+    sort: TagSort.NameAZ,
+    search: searchQuery,
+  });
   const { t } = useTranslation();
 
   const [tagOptions, setTagOptions] = useState<Option[]>([]);
@@ -52,6 +63,20 @@ export default function TagSelection({
       isMulti
       autoFocus={autoFocus}
       onBlur={onBlur}
+      isLoading={isFetchingNextPage}
+      onInputChange={(value: string, { action }: InputActionMeta) => {
+        if (action === "input-change") setSearchQuery(value);
+        else if (
+          action === "input-blur" ||
+          action === "menu-close" ||
+          action === "set-value"
+        )
+          setSearchQuery("");
+      }}
+      onMenuScrollToBottom={() => {
+        if (!hasNextPage || isFetchingNextPage) return;
+        fetchNextPage();
+      }}
     />
   );
 }

@@ -1,6 +1,6 @@
 import archiveHandler from "../lib/archiveHandler";
-import { LinkWithCollectionOwnerAndTags } from "@linkwarden/types";
-import { delay } from "@linkwarden/lib";
+import { LinkWithCollectionOwnerAndTags } from "@linkwarden/types/global";
+import { delay } from "@linkwarden/lib/utils";
 import getLinkBatchFairly from "../lib/getLinkBatchFairly";
 import { launchBrowser } from "../lib/browser";
 import { countUnprocessedBillableLinks } from "../lib/countUnprocessedBillableLinks";
@@ -34,6 +34,7 @@ export async function linkProcessing(interval = 10) {
 
     const links = await getLinkBatchFairly({
       maxBatchLinks: ARCHIVE_TAKE_COUNT,
+      mode: "links",
     });
 
     if (links.length === 0) {

@@ -33,14 +33,22 @@ import useTmpStore from "@/store/tmp";
 import {
   LinkIncludingShortenedCollectionAndTags,
   MobileAuth,
-} from "@linkwarden/types";
+} from "@linkwarden/types/global";
 import { useDeleteLink, useUpdateLink } from "@linkwarden/router/links";
 import { deleteLinkCache } from "@/lib/cache";
 import { queryClient } from "@/lib/queryClient";
 import getOriginalFormat from "@linkwarden/lib/getOriginalFormat";
 import { StatusBar } from "expo-status-bar";
+import { cn } from "@linkwarden/lib/utils";
+import * as Sentry from "@sentry/react-native";
 
-export default function RootLayout() {
+Sentry.init({
+  dsn: "https://00d7eed9e810cbbf91a7ed3547e37100@o4510998442475520.ingest.us.sentry.io/4511033679609856",
+  sendDefaultPii: false,
+  enableLogs: true,
+});
+
+export default Sentry.wrap(function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const { hasShareIntent, shareIntent, error, resetShareIntent } =
     useShareIntent();
@@ -58,7 +66,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!rootNavState?.key) return;
+    if (!rootNavState?.key || isLoading) return;
 
     if (hasShareIntent && shareIntent.webUrl) {
       updateData({
@@ -89,6 +97,7 @@ export default function RootLayout() {
     pathname,
     shareIntent?.webUrl,
     data.shareIntent,
+    isLoading,
   ]);
 
   return (
@@ -110,7 +119,7 @@ export default function RootLayout() {
       <RootComponent isLoading={isLoading} auth={auth} />
     </PersistQueryClientProvider>
   );
-}
+});
 
 const RootComponent = ({
   isLoading,
@@ -120,16 +129,19 @@ const RootComponent = ({
   auth: MobileAuth;
 }) => {
   const { colorScheme } = useColorScheme();
-  const updateLink = useUpdateLink(auth);
-  const deleteLink = useDeleteLink(auth);
+  const updateLink = useUpdateLink({ auth, Alert });
+  const deleteLink = useDeleteLink({ auth, Alert });
 
   const { tmp } = useTmpStore();
 
+  const isIOS26Plus =
+    Platform.OS === "ios" && parseInt(Platform.Version, 10) >= 26;
+
   return (
-    <View
-      style={[{ flex: 1 }, colorScheme === "dark" ? darkTheme : lightTheme]}
-    >
-      <KeyboardProvider>
+    <KeyboardProvider>
+      <View
+        style={[{ flex: 1 }, colorScheme === "dark" ? darkTheme : lightTheme]}
+      >
         <SheetProvider>
           <StatusBar
             style={colorScheme === "dark" ? "light" : "dark"}
@@ -160,7 +172,9 @@ const RootComponent = ({
                         : "white",
                   },
                   headerRight: () => (
-                    <View className="flex-row gap-5">
+                    <View
+                      className={cn("flex-row gap-5", isIOS26Plus && "px-2")}
+                    >
                       <TouchableOpacity
                         onPress={() => {
                           if (tmp.link) {
@@ -229,12 +243,12 @@ const RootComponent = ({
                           {tmp.link && tmp.user && (
                             <DropdownMenu.Item
                               key="pin-link"
-                              onSelect={async () => {
+                              onSelect={() => {
                                 const isAlreadyPinned =
                                   tmp.link?.pinnedBy && tmp.link.pinnedBy[0]
                                     ? true
                                     : false;
-                                await updateLink.mutateAsync({
+                                updateLink.mutateAsync({
                                   ...(tmp.link as LinkIncludingShortenedCollectionAndTags),
                                   pinnedBy: (isAlreadyPinned
                                     ? [{ id: undefined }]
@@ -282,18 +296,15 @@ const RootComponent = ({
                                     {
                                       text: "Delete",
                                       style: "destructive",
-                                      onPress: () => {
+                                      onPress: async () => {
                                         deleteLink.mutate(
-                                          tmp.link?.id as number,
-                                          {
-                                            onSuccess: async () => {
-                                              await deleteLinkCache(
-                                                tmp.link?.id as number
-                                              );
-                                            },
-                                          }
+                                          tmp.link?.id as number
                                         );
-                                        // go back
+
+                                        await deleteLinkCache(
+                                          tmp.link?.id as number
+                                        );
+
                                         router.back();
                                       },
                                     },
@@ -319,7 +330,7 @@ const RootComponent = ({
             </Stack>
           )}
         </SheetProvider>
-      </KeyboardProvider>
-    </View>
+      </View>
+    </KeyboardProvider>
   );
 };

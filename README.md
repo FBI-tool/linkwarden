@@ -3,8 +3,10 @@
   <h1>Linkwarden</h1>
   <h3>Bookmarks, Evolved</h3>
 
+<a href="https://trendshift.io/repositories/4006" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4006" alt="linkwarden%2Flinkwarden | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 <a href="https://discord.com/invite/CtuYV47nuJ"><img src="https://img.shields.io/discord/1117993124669702164?logo=discord&style=flat" alt="Discord"></a>
-<a href="https://twitter.com/LinkwardenHQ"><img src="https://img.shields.io/twitter/follow/linkwarden" alt="Twitter"></a> <a href="https://news.ycombinator.com/item?id=36942308"><img src="https://img.shields.io/badge/Hacker%20News-280-%23FF6600"></img></a>
+<a href="https://twitter.com/LinkwardenHQ"><img src="https://img.shields.io/twitter/follow/linkwarden" alt="Twitter"></a> <a href="https://news.ycombinator.com/item?id=43856801"><img src="https://img.shields.io/badge/Hacker%20News-301-%23FF6600"></img></a>
 
 <a href="https://github.com/linkwarden/linkwarden/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/linkwarden/linkwarden"></a>
 <a href="https://crowdin.com/project/linkwarden">
@@ -106,12 +108,13 @@ Make sure to check out our [public roadmap](https://github.com/orgs/linkwarden/p
 
 ## Community Projects
 
-Here are some community-maintained projects that are built around Linkwarden:
+Here are some awesome community-maintained projects that are built around Linkwarden, be sure to star all of them!
 
-- [My Links](https://apps.apple.com/ca/app/my-links-for-linkwarden/id6504573402) - iOS and MacOS Apps, maintained by [JGeek00](https://github.com/JGeek00).
+- [My Links](https://apps.apple.com/ca/app/my-links-for-linkwarden/id6504573402) - Native iOS and MacOS App, [source code](https://github.com/JGeek00/my-links).
 - [LinkDroid](https://fossdroid.com/a/linkdroid-for-linkwarden.html) - Android App with share sheet integration, [source code](https://github.com/Dacid99/LinkDroid-for-Linkwarden).
 - [LinkGuardian](https://github.com/Elbullazul/LinkGuardian) - An Android client for Linkwarden. Built with Kotlin and Jetpack compose.
 - [StarWarden](https://github.com/rtuszik/starwarden) - A browser extension to save your starred GitHub repositories to Linkwarden.
+- [link-my-harmony](https://github.com/xiebaiyuan/link-my-harmony) - HarmonyOS Next client for Linkwarden (鸿笺 / Folio), built with ArkTS and ArkUI.
 
 ## Development
 

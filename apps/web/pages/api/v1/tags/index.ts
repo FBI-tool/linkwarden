@@ -4,17 +4,28 @@ import verifyUser from "@/lib/api/verifyUser";
 import { PostTagSchema } from "@linkwarden/lib/schemaValidation";
 import createOrUpdateTags from "@/lib/api/controllers/tags/createOrUpdateTags";
 import bulkTagDelete from "@/lib/api/controllers/tags/bulkTagDelete";
+import { TagRequestQuery } from "@linkwarden/types/global";
 
 export default async function tags(req: NextApiRequest, res: NextApiResponse) {
   const user = await verifyUser({ req, res });
   if (!user) return;
 
   if (req.method === "GET") {
+    const convertedData: TagRequestQuery = {
+      sort: req.query.sort ? Number(req.query.sort as string) : undefined,
+      cursor: req.query.cursor ? Number(req.query.cursor as string) : undefined,
+      search:
+        typeof req.query.search === "string" ? req.query.search : undefined,
+    };
+
     const tags = await getTags({
       userId: user.id,
+      query: convertedData,
     });
 
-    return res.status(tags?.status || 500).json({ response: tags?.response });
+    const { statusCode, ...data } = tags;
+
+    return res.status(statusCode).json(data);
   }
 
   if (req.method === "POST") {

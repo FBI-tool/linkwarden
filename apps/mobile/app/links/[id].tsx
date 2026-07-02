@@ -6,7 +6,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useUser } from "@linkwarden/router/user";
 import { useGetLink } from "@linkwarden/router/links";
 import useTmpStore from "@/store/tmp";
-import { ArchivedFormat } from "@linkwarden/types";
+import { ArchivedFormat } from "@linkwarden/types/global";
 import ReadableFormat from "@/components/Formats/ReadableFormat";
 import ImageFormat from "@/components/Formats/ImageFormat";
 import PdfFormat from "@/components/Formats/PdfFormat";
@@ -57,28 +57,19 @@ export default function LinkScreen() {
       style={{ paddingBottom: Platform.OS === "android" ? insets.bottom : 0 }}
     >
       {link?.id && Number(format) === ArchivedFormat.readability ? (
-        <ReadableFormat
-          link={link as any}
-          setIsLoading={(state) => setIsLoading(state)}
-        />
+        <ReadableFormat link={link as any} setIsLoading={setIsLoading} />
       ) : link?.id &&
         (Number(format) === ArchivedFormat.jpeg ||
           Number(format) === ArchivedFormat.png) ? (
         <ImageFormat
           link={link as any}
-          setIsLoading={(state) => setIsLoading(state)}
+          setIsLoading={setIsLoading}
           format={Number(format)}
         />
       ) : link?.id && Number(format) === ArchivedFormat.pdf ? (
-        <PdfFormat
-          link={link as any}
-          setIsLoading={(state) => setIsLoading(state)}
-        />
+        <PdfFormat link={link as any} setIsLoading={setIsLoading} />
       ) : link?.id && Number(format) === ArchivedFormat.monolith ? (
-        <WebpageFormat
-          link={link as any}
-          setIsLoading={(state) => setIsLoading(state)}
-        />
+        <WebpageFormat link={link as any} setIsLoading={setIsLoading} />
       ) : url ? (
         <WebView
           className={isLoading ? "opacity-0" : "flex-1"}
@@ -89,6 +80,9 @@ export default function LinkScreen() {
                 ? { Authorization: `Bearer ${auth.session}` }
                 : {},
           }}
+          contentInsetAdjustmentBehavior="automatic"
+          automaticallyAdjustContentInsets
+          automaticallyAdjustsScrollIndicatorInsets
           onLoadEnd={() => setIsLoading(false)}
         />
       ) : (

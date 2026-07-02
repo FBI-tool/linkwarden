@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "next-i18next";
 import getServerSideProps from "@/lib/client/getServerSideProps";
 import { useUser } from "@linkwarden/router/user";
-import { Separator } from "@/components/ui/separator";
 
 export default function Delete() {
   const [password, setPassword] = useState("");
@@ -58,33 +57,30 @@ export default function Delete() {
 
   return (
     <CenteredForm>
-      <div className="p-4 mx-auto relative flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 bg-base-200 rounded-xl shadow-md border border-neutral-content">
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 left-4"
-        >
-          <Link href="/settings/account">
-            <i className="bi-chevron-left text-neutral text-xl"></i>
-          </Link>
-        </Button>
-        <div className="flex items-center gap-2 w-full rounded-md h-8">
-          <p className="text-red-500 dark:text-red-500 truncate w-full text-3xl text-center">
+      <div className="mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80">
+        <div className="flex items-center gap-2 w-full rounded-md h-8 relative">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="absolute top-0 left-0"
+          >
+            <Link href="/settings/account">
+              <i className="bi-chevron-left text-neutral text-xl"></i>
+            </Link>
+          </Button>
+          <p className="text-red-500 dark:text-red-500 truncate w-full text-2xl text-center">
             {t("delete_account")}
           </p>
         </div>
 
-        <Separator />
-
         <p>{t("delete_warning")}</p>
 
         <div>
-          <p className="mb-2">{t("confirm_password")}</p>
           <TextInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••••••••"
+            placeholder={t("confirm_password")}
             className="bg-base-100"
             type="password"
           />

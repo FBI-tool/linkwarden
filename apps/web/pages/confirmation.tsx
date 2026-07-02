@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import { useTranslation } from "next-i18next";
 import getServerSideProps from "@/lib/client/getServerSideProps";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 export default function EmailConfirmaion() {
   const router = useRouter();
@@ -37,23 +36,17 @@ export default function EmailConfirmaion() {
   };
 
   return (
-    <CenteredForm>
-      <div className="p-4 max-w-[30rem] min-w-80 w-full rounded-xl shadow-md mx-auto border border-neutral-content bg-base-200">
-        <p className="text-center text-xl sm:text-3xl font-extralight mb-2 ">
-          {t("check_your_email")}
-        </p>
-
-        <Separator className="my-3" />
+    <CenteredForm header={t("check_your_email")}>
+      <div className="max-w-[30rem] min-w-80 w-full mx-auto flex flex-col gap-3">
+        <p>{t("verification_email_sent_desc")}</p>
 
         {router.query.email && typeof router.query.email === "string" && (
-          <p className="text-center font-bold mb-3 break-all">
+          <p className="text-center tracking-widest mb-3 break-all">
             {decodeURIComponent(router.query.email)}
           </p>
         )}
 
-        <p>{t("verification_email_sent_desc")}</p>
-
-        <div className="mx-auto w-fit mt-3">
+        <div className="mx-auto w-fit">
           <Button onClick={resend} variant="ghost" size="sm">
             {t("resend_email")}
           </Button>

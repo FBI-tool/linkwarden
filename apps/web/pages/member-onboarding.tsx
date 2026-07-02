@@ -6,9 +6,8 @@ import { useRouter } from "next/router";
 import { FormEvent, useState } from "react";
 import { toast } from "react-hot-toast";
 import getServerSideProps from "@/lib/client/getServerSideProps";
-import { Trans, useTranslation } from "next-i18next";
+import { useTranslation } from "next-i18next";
 import { useUpdateUser, useUser } from "@linkwarden/router/user";
-import { Separator } from "@/components/ui/separator";
 
 interface FormData {
   password: string;
@@ -64,15 +63,9 @@ export default function MemberOnboarding() {
   }
 
   return (
-    <CenteredForm>
+    <CenteredForm header={t("invitation_accepted")}>
       <form onSubmit={submit}>
-        <div className="p-4 mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-base-200 rounded-xl shadow-md border border-neutral-content">
-          <p className="text-3xl text-center font-extralight">
-            {t("invitation_accepted")}
-          </p>
-
-          <Separator />
-
+        <div className="mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full">
           <p
             style={{
               whiteSpace: "pre-line",
@@ -84,12 +77,9 @@ export default function MemberOnboarding() {
           </p>
 
           <div>
-            <p className="text-sm w-fit font-semibold mb-1">
-              {t("display_name")}
-            </p>
             <TextInput
               autoFocus
-              placeholder="John Doe"
+              placeholder={t("display_name")}
               value={form.name}
               className="bg-base-100"
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -97,12 +87,9 @@ export default function MemberOnboarding() {
           </div>
 
           <div>
-            <p className="text-sm w-fit font-semibold mb-1">
-              {t("new_password")}
-            </p>
             <TextInput
               type="password"
-              placeholder="••••••••••••••"
+              placeholder={t("new_password")}
               value={form.password}
               className="bg-base-100"
               onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -110,25 +97,25 @@ export default function MemberOnboarding() {
           </div>
 
           {process.env.NEXT_PUBLIC_STRIPE && (
-            <div className="text-xs text-neutral mb-3">
+            <div className="text-xs text-neutral text-center">
               <p>
-                <Trans
-                  i18nKey="sign_up_agreement"
-                  components={[
-                    <Link
-                      href="https://linkwarden.app/tos"
-                      className="font-semibold"
-                      data-testid="terms-of-service-link"
-                      key={0}
-                    />,
-                    <Link
-                      href="https://linkwarden.app/privacy-policy"
-                      className="font-semibold"
-                      data-testid="privacy-policy-link"
-                      key={1}
-                    />,
-                  ]}
-                />
+                By continuing, you agree to our{" "}
+                <Link
+                  href="https://linkwarden.app/tos"
+                  className="underline"
+                  data-testid="terms-of-service-link"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="https://linkwarden.app/privacy-policy"
+                  className="underline"
+                  data-testid="privacy-policy-link"
+                >
+                  Privacy Policy
+                </Link>
+                .
               </p>
             </div>
           )}
@@ -136,7 +123,6 @@ export default function MemberOnboarding() {
           <Button
             type="submit"
             variant="accent"
-            className="mt-2"
             size="full"
             disabled={submitLoader}
           >

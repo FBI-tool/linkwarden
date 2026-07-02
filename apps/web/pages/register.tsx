@@ -12,7 +12,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@linkwarden/prisma";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { i18n } from "next-i18next.config";
-import { Trans, useTranslation } from "next-i18next";
+import { useTranslation } from "next-i18next";
 import { useConfig } from "@linkwarden/router/config";
 import { Separator } from "@/components/ui/separator";
 import Checkbox from "@/components/Checkbox";
@@ -22,7 +22,6 @@ type FormData = {
   username?: string;
   email?: string;
   password: string;
-  passwordConfirmation: string;
   acceptPromotionalEmails: boolean;
 };
 
@@ -40,7 +39,6 @@ export default function Register({
     username: config?.EMAIL_PROVIDER ? undefined : "",
     email: config?.EMAIL_PROVIDER ? "" : undefined,
     password: "",
-    passwordConfirmation: "",
     acceptPromotionalEmails: false,
   });
 
@@ -50,28 +48,18 @@ export default function Register({
     if (!submitLoader) {
       const checkFields = () => {
         if (config?.EMAIL_PROVIDER) {
-          return (
-            form.name !== "" &&
-            form.email !== "" &&
-            form.password !== "" &&
-            form.passwordConfirmation !== ""
-          );
+          return form.name !== "" && form.email !== "" && form.password !== "";
         } else {
           return (
-            form.name !== "" &&
-            form.username !== "" &&
-            form.password !== "" &&
-            form.passwordConfirmation !== ""
+            form.name !== "" && form.username !== "" && form.password !== ""
           );
         }
       };
 
       if (checkFields()) {
-        if (form.password !== form.passwordConfirmation)
-          return toast.error(t("passwords_mismatch"));
-        else if (form.password.length < 8)
+        if (form.password.length < 8)
           return toast.error(t("password_too_short"));
-        const { passwordConfirmation, ...request } = form;
+        const { ...request } = form;
 
         setSubmitLoader(true);
 
@@ -118,7 +106,7 @@ export default function Register({
 
     const load = toast.loading(t("authenticating"));
 
-    const res = await signIn(method, {});
+    await signIn(method, {});
 
     toast.dismiss(load);
 
@@ -137,11 +125,19 @@ export default function Register({
             variant="metal"
             disabled={submitLoader}
           >
-            {value.name.toLowerCase() === "google" ||
-              (value.name.toLowerCase() === "apple" && (
-                <i className={"bi-" + value.name.toLowerCase()}></i>
-              ))}
-            {value.name}
+            {value.name.toLowerCase() === "google" ? (
+              <>
+                <i className={"bi-google"}></i>
+                {t("continue_with_google")}
+              </>
+            ) : value.name.toLowerCase() === "apple" ? (
+              <>
+                <i className={"bi-apple"}></i>
+                {t("continue_with_apple")}
+              </>
+            ) : (
+              value.name
+            )}
           </Button>
         </React.Fragment>
       );
@@ -151,6 +147,7 @@ export default function Register({
 
   return (
     <CenteredForm
+      header={t("reimagine_how_you_save_links")}
       text={
         process.env.NEXT_PUBLIC_STRIPE
           ? t("trial_offer_desc", {
@@ -161,26 +158,16 @@ export default function Register({
       data-testid="registration-form"
     >
       {config?.DISABLE_REGISTRATION ? (
-        <div className="p-4 flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-base-200 rounded-xl shadow-md border border-neutral-content">
+        <div className="flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full">
           <p>{t("registration_disabled")}</p>
         </div>
       ) : (
         <form onSubmit={registerUser}>
-          <div className="p-4 flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full mx-auto bg-base-200 rounded-xl shadow-md border border-neutral-content">
-            <p className="text-3xl text-center font-extralight">
-              {t("enter_details")}
-            </p>
-
-            <Separator />
-
+          <div className="flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full mx-auto">
             <div>
-              <p className="text-sm w-fit font-semibold mb-1">
-                {t("display_name")}
-              </p>
-
               <TextInput
                 autoFocus={true}
-                placeholder="Johnny"
+                placeholder={t("display_name")}
                 value={form.name}
                 className="bg-base-100"
                 data-testid="display-name-input"
@@ -190,12 +177,8 @@ export default function Register({
 
             {config?.EMAIL_PROVIDER ? undefined : (
               <div>
-                <p className="text-sm w-fit font-semibold mb-1">
-                  {t("username")}
-                </p>
-
                 <TextInput
-                  placeholder="john"
+                  placeholder={t("username")}
                   value={form.username}
                   className="bg-base-100"
                   data-testid="username-input"
@@ -208,11 +191,9 @@ export default function Register({
 
             {config?.EMAIL_PROVIDER && (
               <div>
-                <p className="text-sm w-fit font-semibold mb-1">{t("email")}</p>
-
                 <TextInput
                   type="email"
-                  placeholder="johnny@example.com"
+                  placeholder={t("email")}
                   value={form.email}
                   className="bg-base-100"
                   data-testid="email-input"
@@ -222,34 +203,13 @@ export default function Register({
             )}
 
             <div className="w-full">
-              <p className="text-sm w-fit font-semibold  mb-1">
-                {t("password")}
-              </p>
-
               <TextInput
                 type="password"
-                placeholder="••••••••••••••"
+                placeholder={t("password")}
                 value={form.password}
                 className="bg-base-100"
                 data-testid="password-input"
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </div>
-
-            <div className="w-full">
-              <p className="text-sm w-fit font-semibold mb-1">
-                {t("confirm_password")}
-              </p>
-
-              <TextInput
-                type="password"
-                placeholder="••••••••••••••"
-                value={form.passwordConfirmation}
-                className="bg-base-100"
-                data-testid="password-confirm-input"
-                onChange={(e) =>
-                  setForm({ ...form, passwordConfirmation: e.target.value })
-                }
               />
             </div>
 
@@ -266,28 +226,6 @@ export default function Register({
                     })
                   }
                 />
-
-                <div className="text-xs text-neutral mb-3">
-                  <p>
-                    <Trans
-                      i18nKey="sign_up_agreement"
-                      components={[
-                        <Link
-                          href="https://linkwarden.app/tos"
-                          className="font-semibold"
-                          data-testid="terms-of-service-link"
-                          key={0}
-                        />,
-                        <Link
-                          href="https://linkwarden.app/privacy-policy"
-                          className="font-semibold"
-                          data-testid="privacy-policy-link"
-                          key={1}
-                        />,
-                      ]}
-                    />
-                  </p>
-                </div>
               </>
             )}
 
@@ -304,12 +242,37 @@ export default function Register({
             {availableLogins.buttonAuths.length > 0 && (
               <div className="flex items-center gap-2">
                 <Separator className="my-1 flex-1 w-auto" />
-                <p className="whitespace-nowrap">{t("or_continue_with")}</p>
+                <p className="whitespace-nowrap">{t("or")}</p>
                 <Separator className="my-1 flex-1 w-auto" />
               </div>
             )}
 
             {displayLoginExternalButton()}
+
+            {process.env.NEXT_PUBLIC_STRIPE && (
+              <div className="text-xs text-neutral text-center">
+                <p>
+                  By continuing, you agree to our{" "}
+                  <Link
+                    href="https://linkwarden.app/tos"
+                    className="underline"
+                    data-testid="terms-of-service-link"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="https://linkwarden.app/privacy-policy"
+                    className="underline"
+                    data-testid="privacy-policy-link"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              </div>
+            )}
+
             <div>
               <div className="text-neutral text-center flex items-baseline gap-1 justify-center">
                 <p className="w-fit text-neutral">{t("already_registered")}</p>

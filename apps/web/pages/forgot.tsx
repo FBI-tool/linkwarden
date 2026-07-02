@@ -6,7 +6,6 @@ import { FormEvent, useState } from "react";
 import { toast } from "react-hot-toast";
 import getServerSideProps from "@/lib/client/getServerSideProps";
 import { useTranslation } from "next-i18next";
-import { Separator } from "@/components/ui/separator";
 
 interface FormData {
   email: string;
@@ -60,27 +59,20 @@ export default function Forgot() {
   }
 
   return (
-    <CenteredForm>
+    <CenteredForm header={isEmailSent ? t("email_sent") : t("forgot_password")}>
       <form onSubmit={sendConfirmation}>
-        <div className="p-4 mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-base-200 rounded-xl shadow-md border border-neutral-content">
-          <p className="text-3xl text-center font-extralight">
-            {isEmailSent ? t("email_sent") : t("forgot_password")}
-          </p>
-
-          <Separator />
-
+        <div className="mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full">
           {!isEmailSent ? (
             <>
               <div>
                 <p>{t("password_email_prompt")}</p>
               </div>
-              <div>
-                <p className="text-sm w-fit font-semibold mb-1">{t("email")}</p>
 
+              <div>
                 <TextInput
                   autoFocus
                   type="email"
-                  placeholder="johnny@example.com"
+                  placeholder={t("email")}
                   value={form.email}
                   className="bg-base-100"
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -90,7 +82,6 @@ export default function Forgot() {
               <Button
                 type="submit"
                 variant="accent"
-                className="mt-2"
                 size="full"
                 disabled={submitLoader}
               >
@@ -101,7 +92,7 @@ export default function Forgot() {
             <p>{t("reset_email_sent_desc")}</p>
           )}
 
-          <div className="mx-auto w-fit mt-2">
+          <div className="mx-auto w-fit">
             <Link className="font-semibold" href="/login">
               {t("back_to_login")}
             </Link>

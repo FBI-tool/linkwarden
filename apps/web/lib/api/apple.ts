@@ -27,7 +27,9 @@ export function getAppleClientId() {
 function getApplePrivateKey() {
   if (applePrivateKey) return applePrivateKey;
 
-  const privateKey = readSecret(process.env.APPLE_PRIVATE_KEY);
+  const privateKey = readSecret(
+    process.env.APPLE_PRIVATE_KEY ?? process.env.APPLE_PRIVATE_KEY_PATH
+  );
 
   if (!privateKey) throw Error("Apple private key is not configured.");
 
@@ -97,27 +99,14 @@ export async function verifyAppleIdentityToken(
 }
 
 export function getAppleClientSecret() {
+  const now = Math.floor(Date.now() / 1000);
+
   if (
-    process.env.APPLE_TEAM_ID &&
-    process.env.APPLE_KEY_ID &&
-    process.env.APPLE_PRIVATE_KEY_PATH
+    !appleClientSecret ||
+    appleClientSecret.expiresAt - appleClientSecretRenewBuffer <= now
   ) {
-    const now = Math.floor(Date.now() / 1000);
-
-    if (
-      !appleClientSecret ||
-      appleClientSecret.expiresAt - appleClientSecretRenewBuffer <= now
-    ) {
-      appleClientSecret = createAppleClientSecret();
-    }
-
-    return appleClientSecret.value;
+    appleClientSecret = createAppleClientSecret();
   }
 
-  const clientSecret =
-    process.env.APPLE_CLIENT_SECRET || process.env.APPLE_SECRET;
-
-  if (!clientSecret) throw Error("Apple client secret is not configured.");
-
-  return clientSecret;
+  return appleClientSecret.value;
 }

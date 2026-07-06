@@ -1,7 +1,7 @@
 import { prisma } from "@linkwarden/prisma";
 import { Subscription, User } from "@linkwarden/prisma/client";
 import checkStripeSubscriptionByEmail from "./checkStripeSubscriptionByEmail";
-import syncRevenuecatSubscription from "./syncRevenuecatSubscription";
+import syncStoreSubscription from "./syncStoreSubscription";
 import { stripeStoreReset } from "./stripeStoreReset";
 
 interface UserIncludingSubscription extends User {
@@ -11,6 +11,7 @@ interface UserIncludingSubscription extends User {
 
 const TRIAL_PERIOD_DAYS = process.env.NEXT_PUBLIC_TRIAL_PERIOD_DAYS || 14;
 const REQUIRE_CC = process.env.NEXT_PUBLIC_REQUIRE_CC === "true";
+const STORE_SYNC_GRACE_PERIOD_MS = 3 * 86400000;
 
 export default async function verifySubscription(
   user?: UserIncludingSubscription | null
@@ -82,14 +83,30 @@ export default async function verifySubscription(
         })
         .catch((err) => console.log(err));
     } else {
-      const subscription = await syncRevenuecatSubscription(user).catch(
-        (err) => {
-          console.log(err);
-          return null;
-        }
-      );
+      const subscription = await syncStoreSubscription(user).catch((err) => {
+        console.log(err);
+        return null;
+      });
 
       if (!subscription?.active) {
+        // A null result means the sync couldn't consult the store (missing store
+        // credentials or identifiers) rather than an authoritative "expired".
+        // Honor the row itself within a short grace window past its period end
+        // instead of locking out a payer.
+        const graceCutoff =
+          user.subscriptions &&
+          new Date(user.subscriptions.currentPeriodEnd).getTime() +
+            STORE_SYNC_GRACE_PERIOD_MS;
+
+        if (
+          subscription === null &&
+          user.subscriptions?.active &&
+          graceCutoff &&
+          Date.now() < graceCutoff
+        ) {
+          return user;
+        }
+
         return null;
       }
     }

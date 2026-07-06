@@ -5,10 +5,16 @@ import {
   shouldRouteToSubscribe,
 } from "@/lib/subscription";
 import { ensureCloudIsReachable } from "@/lib/ensureCloudIsReachable";
+import {
+  formatPrice,
+  getPlanOption,
+  SUBSCRIPTION_SKUS,
+  verifyPurchaseWithServer,
+} from "@/lib/iap";
 import useAuthStore from "@/store/auth";
 import { useConfig } from "@linkwarden/router/config";
 import { useUser } from "@linkwarden/router/user";
-import { MobileAuth, Plan } from "@linkwarden/types/global";
+import { Plan } from "@linkwarden/types/global";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import {
@@ -22,8 +28,15 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import { useFonts } from "expo-font";
 import * as DropdownMenu from "zeego/dropdown-menu";
-import Purchases, { type PurchasesPackage } from "react-native-purchases";
+import {
+  ErrorCode,
+  getAvailablePurchases,
+  isEligibleForIntroOfferIOS,
+  useIAP,
+  type Purchase,
+} from "expo-iap";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -44,37 +57,6 @@ import {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const saveGooglePurchaseToken = async (
-  auth: MobileAuth,
-  purchaseToken: string,
-  attempts = 5
-) => {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const res = await fetch(
-        `${auth.instance}/api/v1/billing/google-purchase-token`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.session}`,
-          },
-          body: JSON.stringify({ purchaseToken }),
-        }
-      );
-
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (data?.updated > 0) return;
-      } else if (res.status === 409) {
-        return;
-      }
-    } catch {}
-
-    await wait(1500);
-  }
-};
-
 const features = [
   { title: "Save & organize", icon: Bookmark },
   { title: "Permanent archives", icon: Archive },
@@ -88,11 +70,13 @@ const paymentButton = Platform.select({
     accessibilityLabel: "Subscribe with Apple Pay",
     icon: "apple-pay",
     iconSize: 40,
+    label: "Subscribe",
   },
   android: {
     accessibilityLabel: "Subscribe with Google Pay",
     icon: "google-pay",
     iconSize: 40,
+    label: "Subscribe",
   },
   default: {
     accessibilityLabel: "Complete Subscription",
@@ -100,45 +84,6 @@ const paymentButton = Platform.select({
     label: "Complete Subscription",
   },
 });
-
-type RevenueCatPackages = {
-  monthly: PurchasesPackage | null;
-  yearly: PurchasesPackage | null;
-};
-
-const formatTrialPeriod = (
-  unit?: string,
-  units = 1,
-  cycles: number | null = 1
-) => {
-  const total = Math.max(1, units * (cycles || 1));
-  const normalizedUnit = (unit || "day").toLowerCase();
-  const label = total === 1 ? normalizedUnit : `${normalizedUnit}s`;
-
-  return `${total} ${label}`;
-};
-
-const getFreeTrialPeriod = (product?: PurchasesPackage["product"]) => {
-  const freePhase = product?.defaultOption?.freePhase;
-
-  if (freePhase) {
-    return formatTrialPeriod(
-      freePhase.billingPeriod.unit,
-      freePhase.billingPeriod.value,
-      freePhase.billingCycleCount
-    );
-  }
-
-  if (product?.introPrice?.price === 0) {
-    return formatTrialPeriod(
-      product.introPrice.periodUnit,
-      product.introPrice.periodNumberOfUnits,
-      product.introPrice.cycles
-    );
-  }
-
-  return null;
-};
 
 export default function SubscribeScreen() {
   const { auth, signOut } = useAuthStore();
@@ -157,11 +102,87 @@ export default function SubscribeScreen() {
   const config = useConfig(auth);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
-  const [revenueCatPackages, setRevenueCatPackages] =
-    useState<RevenueCatPackages>({
-      monthly: null,
-      yearly: null,
-    });
+  const [productsError, setProductsError] = useState(false);
+  const [fetchAttempt, setFetchAttempt] = useState(0);
+  const [payIconReady] = useFonts(FontAwesome5.font);
+
+  const [introOfferEligible, setIntroOfferEligible] = useState(
+    Platform.OS !== "ios"
+  );
+
+  const activateSubscription = async () => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const { data } = await refetchUser();
+
+      if (data?.subscription?.active || data?.parentSubscription?.active) {
+        router.replace("/(tabs)/dashboard");
+        return;
+      }
+
+      await wait(1000);
+    }
+
+    Alert.alert(
+      "Subscription syncing",
+      "Your purchase was completed and is still syncing. Please try again in a moment."
+    );
+  };
+
+  const handlePurchaseSuccess = async (purchase: Purchase) => {
+    try {
+      // Ask-to-Buy / slow payment methods complete later; the purchase comes back
+      // through this listener again once it's actually purchased.
+      if (purchase.purchaseState === "pending") {
+        Alert.alert(
+          "Purchase pending",
+          "Your purchase is awaiting approval and will activate once it completes."
+        );
+        return;
+      }
+
+      const verified = await verifyPurchaseWithServer(
+        useAuthStore.getState().auth,
+        purchase
+      );
+
+      if (verified) {
+        // Only finish after the server has validated it — unfinished purchases are
+        // redelivered on the next launch, which is the retry mechanism.
+        await finishTransaction({ purchase, isConsumable: false }).catch(
+          () => {}
+        );
+        await activateSubscription();
+      } else {
+        Alert.alert(
+          "Subscription syncing",
+          "Your purchase was completed and is still syncing. Please try again in a moment."
+        );
+      }
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+  const {
+    connected,
+    subscriptions,
+    fetchProducts,
+    requestPurchase,
+    finishTransaction,
+    reconnect,
+  } = useIAP({
+    onPurchaseSuccess: handlePurchaseSuccess,
+    onPurchaseError: (error) => {
+      setPurchaseLoading(false);
+
+      if (
+        error.code !== ErrorCode.UserCancelled &&
+        error.code !== ErrorCode.DeferredPayment
+      ) {
+        Alert.alert("Purchase failed", "Could not complete purchase.");
+      }
+    },
+  });
 
   const isForcedSubscribe = shouldRouteToSubscribe(user, config.data);
   const showSubscribe = hasInactiveSubscription(user, config.data);
@@ -176,87 +197,122 @@ export default function SubscribeScreen() {
   }, [auth.status, isChecking, showSubscribe]);
 
   useEffect(() => {
+    if (!connected) return;
+
     let active = true;
 
-    const fetchOfferings = async () => {
-      try {
-        if (!active) return;
-
-        if (!(await Purchases.isConfigured())) {
-          setTimeout(fetchOfferings, 250);
-          return;
-        }
-
-        const offerings = await Purchases.getOfferings();
-        if (!active) return;
-
-        setRevenueCatPackages({
-          monthly: offerings.current?.monthly ?? null,
-          yearly: offerings.current?.annual ?? null,
-        });
-      } catch {}
-    };
-
-    fetchOfferings();
+    fetchProducts({ skus: SUBSCRIPTION_SKUS, type: "subs" })
+      .then(() => active && setProductsError(false))
+      .catch(() => active && setProductsError(true));
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [connected, fetchAttempt]);
+
+  const monthlyPlan = useMemo(
+    () => getPlanOption(subscriptions, "monthly"),
+    [subscriptions]
+  );
+  const yearlyPlan = useMemo(
+    () => getPlanOption(subscriptions, "yearly"),
+    [subscriptions]
+  );
+
+  const plansLoaded = Boolean(monthlyPlan && yearlyPlan);
+
+  // A trial-expired user is forced onto this screen, so a failed store
+  // connection or product fetch must keep retrying instead of dead-ending.
+  useEffect(() => {
+    if (plansLoaded) return;
+
+    const timer = setInterval(() => {
+      if (!connected) {
+        reconnect().catch(() => {});
+      } else {
+        setFetchAttempt((attempt) => attempt + 1);
+      }
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [plansLoaded, connected]);
+
+  // iOS product metadata always advertises the intro offer; whether this Apple ID
+  // is still eligible for it has to be checked separately.
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    const groupId = subscriptions
+      .map((subscription) =>
+        subscription.platform === "ios"
+          ? subscription.subscriptionGroupIdIOS
+          : null
+      )
+      .find(Boolean);
+
+    if (!groupId) return;
+
+    let active = true;
+
+    isEligibleForIntroOfferIOS(groupId)
+      .then((eligible) => active && setIntroOfferEligible(eligible))
+      .catch(() => active && setIntroOfferEligible(false));
+
+    return () => {
+      active = false;
+    };
+  }, [subscriptions]);
 
   const planCards = useMemo(
     () => [
       {
         key: Plan.yearly,
         label: "Yearly",
-        package: revenueCatPackages.yearly,
-        price: revenueCatPackages.yearly?.product?.priceString ?? null,
+        price: yearlyPlan?.displayPrice ?? null,
         suffix: "/yr",
-        caption: revenueCatPackages.yearly?.product?.pricePerMonthString
-          ? `Only ${revenueCatPackages.yearly.product.pricePerMonthString}/mo`
+        caption: yearlyPlan?.priceAmount
+          ? `Only ${formatPrice(
+              yearlyPlan.priceAmount / 12,
+              yearlyPlan.currency
+            )}/mo`
           : null,
       },
       {
         key: Plan.monthly,
         label: "Monthly",
-        package: revenueCatPackages.monthly,
-        price: revenueCatPackages.monthly?.product?.priceString ?? null,
+        price: monthlyPlan?.displayPrice ?? null,
         suffix: "/mo",
-        caption: revenueCatPackages.monthly?.product?.priceString
-          ? `Billed at ${revenueCatPackages.monthly.product.priceString}/mo.`
+        caption: monthlyPlan?.displayPrice
+          ? `Billed at ${monthlyPlan.displayPrice}/mo.`
           : null,
       },
     ],
-    [revenueCatPackages.monthly, revenueCatPackages.yearly]
+    [monthlyPlan, yearlyPlan]
   );
 
   const savingsPercent = useMemo(() => {
-    const monthlyPrice = revenueCatPackages.monthly?.product?.price;
-    const yearlyPrice = revenueCatPackages.yearly?.product?.price;
+    const monthlyPrice = monthlyPlan?.priceAmount;
+    const yearlyPrice = yearlyPlan?.priceAmount;
     if (!monthlyPrice || !yearlyPrice) return null;
     const percent = Math.round((1 - yearlyPrice / (monthlyPrice * 12)) * 100);
     return percent > 0 ? percent : null;
-  }, [revenueCatPackages.monthly, revenueCatPackages.yearly]);
+  }, [monthlyPlan, yearlyPlan]);
 
   const selectedPlan = useMemo(() => {
-    const selectedPackage =
-      plan === Plan.monthly
-        ? revenueCatPackages.monthly
-        : revenueCatPackages.yearly;
-    const product = selectedPackage?.product;
-    const total = product?.priceString;
+    const option = plan === Plan.monthly ? monthlyPlan : yearlyPlan;
+    const total = option?.displayPrice;
     const period = plan === Plan.monthly ? "month" : "year";
-    const freeTrialPeriod = getFreeTrialPeriod(product);
+    const freeTrialPeriod = introOfferEligible ? option?.freeTrialPeriod : null;
 
     return {
-      package: selectedPackage ?? null,
+      option: option ?? null,
       footnote: total
         ? freeTrialPeriod
           ? `Get ${freeTrialPeriod} free, then ${total} per ${period}. Cancel anytime from your device settings.`
           : `${total} per ${period}. Cancel anytime from your device settings.`
         : null,
     };
-  }, [plan, revenueCatPackages.monthly, revenueCatPackages.yearly]);
+  }, [plan, monthlyPlan, yearlyPlan, introOfferEligible]);
 
   if (isChecking || auth.status !== "authenticated" || !showSubscribe) {
     return (
@@ -266,40 +322,32 @@ export default function SubscribeScreen() {
     );
   }
 
-  const activateSubscription = async (customerInfo: any) => {
-    if (Object.keys(customerInfo.entitlements.active).length === 0)
-      return false;
-
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const { data } = await refetchUser();
-
-      if (data?.subscription?.active || data?.parentSubscription?.active) {
-        router.replace("/(tabs)/dashboard");
-        return true;
-      }
-
-      await wait(1000);
-    }
-
-    Alert.alert(
-      "Subscription syncing",
-      "Your purchase was completed and is still syncing. Please try again in a moment."
-    );
-    return true;
-  };
-
   const restorePurchases = async () => {
     if (restoreLoading) return;
 
     setRestoreLoading(true);
 
     try {
-      if (user?.uuid) await Purchases.logIn(user.uuid);
+      const purchases = await getAvailablePurchases();
+      const owned = purchases.filter((purchase) =>
+        SUBSCRIPTION_SKUS.includes(purchase.productId)
+      );
 
-      const customerInfo = await Purchases.restorePurchases();
-      const restored = await activateSubscription(customerInfo);
+      let restored = false;
 
-      if (!restored) {
+      for (const purchase of owned) {
+        if (await verifyPurchaseWithServer(auth, purchase)) {
+          await finishTransaction({ purchase, isConsumable: false }).catch(
+            () => {}
+          );
+          restored = true;
+          break;
+        }
+      }
+
+      if (restored) {
+        await activateSubscription();
+      } else {
         Alert.alert("No purchases found", "No active purchases were found.");
       }
     } catch {
@@ -310,39 +358,55 @@ export default function SubscribeScreen() {
   };
 
   const purchase = async () => {
-    if (!selectedPlan.package || purchaseLoading || !user?.uuid) return;
+    if (!selectedPlan.option || purchaseLoading || !user?.uuid) return;
 
     setPurchaseLoading(true);
 
     try {
       const serverReachable = await ensureCloudIsReachable(auth.instance);
-      if (!serverReachable) return;
+      if (!serverReachable) {
+        setPurchaseLoading(false);
+        return;
+      }
 
-      await Purchases.logIn(user.uuid);
-      if (user.email) await Purchases.setEmail(user.email);
-      await Purchases.invalidateCustomerInfoCache();
-
-      const existingCustomerInfo = await Purchases.getCustomerInfo();
-      const alreadySubscribed =
-        await activateSubscription(existingCustomerInfo);
-
-      if (alreadySubscribed) return;
-
-      const { customerInfo, transaction } = await Purchases.purchasePackage(
-        selectedPlan.package
+      // The store account may already hold a subscription (reinstall, new device,
+      // signed-out repurchase attempt) — re-link it instead of buying again.
+      const existing = await getAvailablePurchases().catch(
+        () => [] as Purchase[]
       );
-      await activateSubscription(customerInfo);
+      const owned = existing.find((purchase) =>
+        SUBSCRIPTION_SKUS.includes(purchase.productId)
+      );
 
-      // Android only: persist the Google Play purchase token (null on iOS). Fire-and-forget
-      // after activation, by which point the subscription row exists server-side.
-      if (transaction?.purchaseToken) {
-        saveGooglePurchaseToken(auth, transaction.purchaseToken);
+      if (owned && (await verifyPurchaseWithServer(auth, owned))) {
+        await finishTransaction({ purchase: owned, isConsumable: false }).catch(
+          () => {}
+        );
+        await activateSubscription();
+        setPurchaseLoading(false);
+        return;
       }
-    } catch (error: any) {
-      if (!error?.userCancelled) {
-        Alert.alert("Purchase failed", "Could not complete purchase.");
-      }
-    } finally {
+
+      const { sku, offerToken } = selectedPlan.option;
+
+      // The result is delivered to onPurchaseSuccess/onPurchaseError, which also
+      // clear the loading state.
+      await requestPurchase({
+        request: {
+          apple: {
+            sku,
+            appAccountToken: user.uuid,
+          },
+          google: {
+            skus: [sku],
+            subscriptionOffers: offerToken ? [{ sku, offerToken }] : undefined,
+            obfuscatedAccountId: user.uuid,
+          },
+        },
+        type: "subs",
+      });
+    } catch {
+      // Failures (including cancellation) are surfaced through onPurchaseError
       setPurchaseLoading(false);
     }
   };
@@ -457,6 +521,22 @@ export default function SubscribeScreen() {
           })}
         </View>
 
+        {/* Also shown when fetches "succeed" with no matching products (e.g. SKU
+            env vars not matching the store's product ids — unknown ids are
+            silently omitted rather than erroring) */}
+        {(productsError || fetchAttempt >= 2) && !plansLoaded ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            className="mt-3"
+            onPress={() => setFetchAttempt((attempt) => attempt + 1)}
+          >
+            <Text className="text-neutral text-center text-sm">
+              Couldn't load subscription plans.{" "}
+              <Text className="text-primary font-semibold">Retry</Text>
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         <Button
           variant="ghost"
           size="lg"
@@ -464,11 +544,11 @@ export default function SubscribeScreen() {
           accessibilityRole="button"
           accessibilityLabel={paymentButton.accessibilityLabel}
           className={`w-full flex-row mt-4 px-4 ${payButtonClass}`}
-          disabled={!selectedPlan.package || purchaseLoading || !user?.uuid}
+          disabled={!selectedPlan.option || purchaseLoading || !user?.uuid}
           onPress={purchase}
           isLoading={purchaseLoading}
         >
-          {paymentButton.icon ? (
+          {paymentButton.icon && payIconReady ? (
             <FontAwesome5
               brand
               name={paymentButton.icon}

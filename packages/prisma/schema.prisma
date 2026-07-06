@@ -221,19 +221,18 @@ model Tag {
 model Subscription {
   id                     Int      @id @default(autoincrement())
   active                 Boolean
-  stripeSubscriptionId   String?  @unique
-  revenueCatAppUserId    String?  @unique @db.Uuid
+  provider               SubscriptionProvider
   currentPeriodStart     DateTime
   currentPeriodEnd       DateTime
   quantity               Int      @default(1)
-  provider               SubscriptionProvider
   
-  store                      SubscriptionStore?
   storeOriginalTransactionId String?              @unique
   storeProductId             String?
-  googlePurchaseToken        String?              @unique // Google Play purchase token — captured client-side; RevenueCat never exposes it, and Google's API needs it
-  revenuecatMetadata         Json?
+  googlePurchaseToken        String?              @unique // Google Play purchase token — the key for querying/acknowledging the subscription
+  storeMetadata              Json?
 
+  stripeSubscriptionId   String?  @unique
+  
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                 Int      @unique
   childUsers             User[]   @relation("ChildUsers")
@@ -243,12 +242,8 @@ model Subscription {
 
 enum SubscriptionProvider {
   STRIPE
-  REVENUECAT
-}
-
-enum SubscriptionStore {
-  APP_STORE
-  PLAY_STORE
+  APPLE
+  GOOGLE
 }
 
 model AccessToken {

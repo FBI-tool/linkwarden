@@ -5,6 +5,7 @@ import { DeleteUserBody } from "@linkwarden/types/global";
 import updateSeats from "@/lib/api/billing/updateSeats";
 import { meiliClient } from "@linkwarden/lib/meilisearchClient";
 import stripeSDK from "@/lib/api/billing/stripeSDK";
+import { isStoreBillingConfigured } from "@/lib/api/billing/syncStoreSubscription";
 import transporter from "@linkwarden/lib/transporter";
 
 export default async function deleteUserById(
@@ -142,10 +143,7 @@ export default async function deleteUserById(
         await removeFile({ filePath: `uploads/avatar/${queryId}.jpg` });
 
         const billingEnabled =
-          Boolean(process.env.STRIPE_SECRET_KEY) ||
-          Boolean(
-            process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY
-          );
+          Boolean(process.env.STRIPE_SECRET_KEY) || isStoreBillingConfigured();
 
         // Send an email about cancellation reason if provided
         if (

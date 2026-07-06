@@ -4,11 +4,11 @@ import updateUserById from "@/lib/api/controllers/users/userId/updateUserById";
 import deleteUserById from "@/lib/api/controllers/users/userId/deleteUserById";
 import { prisma } from "@linkwarden/prisma";
 import verifySubscription from "@/lib/api/billing/verifySubscription";
+import { isStoreBillingConfigured } from "@/lib/api/billing/syncStoreSubscription";
 import verifyToken from "@/lib/api/verifyToken";
 
 const BILLING_ENABLED =
-  Boolean(process.env.STRIPE_SECRET_KEY) ||
-  Boolean(process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY);
+  Boolean(process.env.STRIPE_SECRET_KEY) || isStoreBillingConfigured();
 
 export default async function users(req: NextApiRequest, res: NextApiResponse) {
   const token = await verifyToken({ req });

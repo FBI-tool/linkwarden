@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import getUserById from "@/lib/api/controllers/users/userId/getUserById";
-import syncRevenuecatSubscription from "@/lib/api/billing/syncRevenuecatSubscription";
+import syncStoreSubscription from "@/lib/api/billing/syncStoreSubscription";
 import verifyToken from "@/lib/api/verifyToken";
 import { prisma } from "@linkwarden/prisma";
 
-const syncRevenuecatSubscriptionIfNeeded = async (userId: number) => {
+const syncStoreSubscriptionIfNeeded = async (userId: number) => {
   const user = await prisma.user.findUnique({
     where: {
       id: userId,
@@ -29,16 +29,16 @@ const syncRevenuecatSubscriptionIfNeeded = async (userId: number) => {
 
   if (!user || user.parentSubscription?.active) return;
 
-  const shouldSyncRevenuecatSubscription =
+  const shouldSyncStoreSubscription =
     !user.subscriptions ||
     !user.subscriptions.active ||
-    (user.subscriptions.provider === "REVENUECAT" &&
+    (user.subscriptions.provider !== "STRIPE" &&
       new Date() > user.subscriptions.currentPeriodEnd);
 
-  if (!shouldSyncRevenuecatSubscription) return;
+  if (!shouldSyncStoreSubscription) return;
 
-  await syncRevenuecatSubscription(user).catch((error) => {
-    console.error("Error syncing RevenueCat subscription:", error);
+  await syncStoreSubscription(user).catch((error) => {
+    console.error("Error syncing store subscription:", error);
   });
 };
 
@@ -53,7 +53,7 @@ export default async function me(req: NextApiRequest, res: NextApiResponse) {
   const userId = token.id;
 
   if (req.method === "GET") {
-    await syncRevenuecatSubscriptionIfNeeded(userId);
+    await syncStoreSubscriptionIfNeeded(userId);
 
     const users = await getUserById(userId);
     return res.status(users.status).json({ response: users.response });

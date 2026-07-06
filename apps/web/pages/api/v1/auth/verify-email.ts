@@ -1,6 +1,5 @@
 import { prisma } from "@linkwarden/prisma";
 import updateCustomerEmail from "@/lib/api/billing/updateStripeCustomerEmail";
-import updateRevenuecatCustomerEmail from "@/lib/api/billing/updateRevenuecatCustomerEmail";
 import { VerifyEmailSchema } from "@linkwarden/lib/schemaValidation";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -103,13 +102,6 @@ export default async function verifyEmail(
 
     if (process.env.STRIPE_SECRET_KEY) {
       await updateCustomerEmail(oldEmail, newEmail);
-    }
-
-    if (process.env.REVENUECAT_PROJECT_ID && process.env.REVENUECAT_API_KEY) {
-      await updateRevenuecatCustomerEmail(
-        user.subscriptions?.revenueCatAppUserId ?? user.uuid,
-        newEmail
-      );
     }
 
     // Clean up existing tokens

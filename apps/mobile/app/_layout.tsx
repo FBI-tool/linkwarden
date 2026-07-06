@@ -12,7 +12,7 @@ import { SheetProvider } from "react-native-actions-sheet";
 import "@/components/ActionSheets/Sheets";
 import { useColorScheme } from "nativewind";
 import { lightTheme, darkTheme } from "../lib/theme";
-import { Platform, View } from "react-native";
+import { View } from "react-native";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import { useShareIntent } from "expo-share-intent";
 import useDataStore from "@/store/data";
@@ -23,7 +23,6 @@ import { queryClient } from "@/lib/queryClient";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from "@sentry/react-native";
 import OfflineSyncProvider from "@/components/OfflineSyncProvider";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 Sentry.init({
   dsn: "https://00d7eed9e810cbbf91a7ed3547e37100@o4510998442475520.ingest.us.sentry.io/4511033679609856",
@@ -47,26 +46,6 @@ export default Sentry.wrap(function RootLayout() {
     setAuth();
     setData();
     setReader();
-
-    Purchases.setLogLevel(
-      process.env.EXPO_PUBLIC_SHOW_LOGS === "true"
-        ? LOG_LEVEL.VERBOSE
-        : LOG_LEVEL.ERROR
-    );
-
-    // Platform-specific API keys
-    const iosApiKey =
-      process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ??
-      "appl_KYAGLnQJZpcgxmmVIoMTMZtSnYI";
-    const androidApiKey =
-      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ??
-      "goog_MNATzOjDJIQJIQlkBuJMkmTjxJF";
-
-    if (Platform.OS === "ios") {
-      Purchases.configure({ apiKey: iosApiKey });
-    } else if (Platform.OS === "android") {
-      Purchases.configure({ apiKey: androidApiKey });
-    }
   }, []);
 
   useEffect(() => {

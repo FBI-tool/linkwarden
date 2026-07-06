@@ -73,8 +73,9 @@ const Page: NextPageWithLayout = () => {
   });
 
   const [inviteModal, setInviteModal] = useState(false);
-  const isRevenueCatSubscription =
-    account?.subscription?.provider === "REVENUECAT";
+  const isMobileStoreSubscription =
+    account?.subscription?.provider === "APPLE" ||
+    account?.subscription?.provider === "GOOGLE";
 
   return (
     <>
@@ -87,7 +88,7 @@ const Page: NextPageWithLayout = () => {
 
       <Separator className="my-3" />
 
-      {isRevenueCatSubscription ? (
+      {isMobileStoreSubscription ? (
         <div className="w-full mx-auto flex flex-col gap-3 justify-between">
           <p className="text-md">{t("mobile_billing_managed_externally")}</p>
 

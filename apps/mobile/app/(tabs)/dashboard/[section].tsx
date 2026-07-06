@@ -1,5 +1,9 @@
 import { useLinks } from "@linkwarden/router/links";
-import { View, Platform } from "react-native";
+import { View, Platform, TouchableOpacity } from "react-native";
+import { Plus } from "lucide-react-native";
+import { SheetManager } from "react-native-actions-sheet";
+import { useColorScheme } from "nativewind";
+import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -16,6 +20,7 @@ export default function LinksScreen() {
 
   const navigation = useNavigation();
   const collections = useCollections(auth);
+  const { colorScheme } = useColorScheme();
   const isIOS26Plus =
     Platform.OS === "ios" && parseInt(Platform.Version, 10) >= 26;
 
@@ -43,8 +48,35 @@ export default function LinksScreen() {
           placement: "integratedButton",
         }),
       },
+      headerRight:
+        section === "pinned-links"
+          ? undefined
+          : () => (
+              <TouchableOpacity
+                onPress={() =>
+                  SheetManager.show(
+                    "add-link-sheet",
+                    section === "collection" && collectionId
+                      ? {
+                          payload: {
+                            collection: {
+                              id: Number(collectionId),
+                              name: title,
+                            },
+                          },
+                        }
+                      : undefined
+                  )
+                }
+              >
+                <Plus
+                  size={21}
+                  color={rawTheme[colorScheme as ThemeName].primary}
+                />
+              </TouchableOpacity>
+            ),
     });
-  }, [title, navigation]);
+  }, [title, navigation, section, collectionId, colorScheme]);
 
   const { links, data } = useLinks(
     {

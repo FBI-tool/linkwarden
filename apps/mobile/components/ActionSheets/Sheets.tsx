@@ -42,7 +42,12 @@ declare module "react-native-actions-sheet" {
     "login-sheet": SheetDefinition;
     "sign-up-sheet": SheetDefinition;
     "self-hosted-server-sheet": SheetDefinition;
-    "add-link-sheet": SheetDefinition;
+    "add-link-sheet": SheetDefinition<{
+      payload: {
+        collection?: { id?: number; name?: string };
+        tag?: { id?: number; name?: string };
+      };
+    }>;
     "link-details-sheet": SheetDefinition<{
       payload: {
         link: LinkIncludingShortenedCollectionAndTags;

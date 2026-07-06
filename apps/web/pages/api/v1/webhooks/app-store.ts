@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@linkwarden/prisma";
 import getAppleSubscriptionState, {
   decodeJws,
@@ -8,6 +9,18 @@ import { writeAppleSubscription } from "@/lib/api/billing/syncStoreSubscription"
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const isAuthorized = (req: NextApiRequest) => {
+  const secret = process.env.APP_STORE_WEBHOOK_TOKEN;
+  if (!secret) return true;
+
+  const token = req.query.token;
+  if (typeof token !== "string") return false;
+
+  const a = new TextEncoder().encode(token);
+  const b = new TextEncoder().encode(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
 
 type NotificationPayload = {
   notificationType?: string;
@@ -41,6 +54,10 @@ export default async function appStoreWebhook(
     });
   }
 
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ response: "Invalid token." });
+  }
+
   const payload = decodeJws<NotificationPayload>(req.body?.signedPayload);
 
   if (!payload?.notificationType) {
@@ -51,7 +68,10 @@ export default async function appStoreWebhook(
     payload.data?.signedTransactionInfo
   );
 
-  if (payload.notificationType === "TEST" || !transactionInfo?.originalTransactionId) {
+  if (
+    payload.notificationType === "TEST" ||
+    !transactionInfo?.originalTransactionId
+  ) {
     return res.status(200).json({ response: "Event ignored." });
   }
 
@@ -78,7 +98,11 @@ export default async function appStoreWebhook(
       if (subscription) userId = subscription.userId;
     }
 
-    if (!userId && state.appAccountToken && UUID_REGEX.test(state.appAccountToken)) {
+    if (
+      !userId &&
+      state.appAccountToken &&
+      UUID_REGEX.test(state.appAccountToken)
+    ) {
       const user = await prisma.user.findUnique({
         where: { uuid: state.appAccountToken },
         select: { id: true },

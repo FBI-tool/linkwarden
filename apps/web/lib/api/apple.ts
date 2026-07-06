@@ -27,7 +27,7 @@ export function getAppleClientId() {
 function getApplePrivateKey() {
   if (applePrivateKey) return applePrivateKey;
 
-  const privateKey = readSecret(process.env.APPLE_PRIVATE_KEY_PATH);
+  const privateKey = readSecret(process.env.APPLE_PRIVATE_KEY);
 
   if (!privateKey) throw Error("Apple private key is not configured.");
 

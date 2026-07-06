@@ -134,6 +134,27 @@ export default async function getGoogleSubscriptionState(
   };
 }
 
+// Turns off auto-renew; the subscription stays paid-up until its period ends.
+// Used when an account is deleted, since the user can no longer benefit from it.
+// (App Store subscriptions have no equivalent — only the customer can cancel.)
+export async function cancelGoogleSubscription(purchaseToken: string) {
+  try {
+    await getClient().request({
+      url: `${API_BASE}/purchases/subscriptionsv2/tokens/${encodeURIComponent(
+        purchaseToken
+      )}:cancel`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: {},
+    });
+  } catch (error: any) {
+    const status = error?.response?.status;
+    // Already cancelled/expired or purged token — nothing left to cancel
+    if (status === 400 || status === 404 || status === 410) return;
+    throw error;
+  }
+}
+
 // Unacknowledged purchases are auto-refunded by Google after 3 days, so this must
 // run server-side even though the app also finishes the transaction client-side.
 export async function acknowledgeGoogleSubscription(

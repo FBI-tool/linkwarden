@@ -76,6 +76,28 @@ export default function Delete() {
 
         <p>{t("delete_warning")}</p>
 
+        {user?.subscription?.active &&
+          user.subscription.provider === "APPLE" && (
+            <p className="text-sm border border-primary rounded-md p-2">
+              {t("delete_account_apple_subscription_notice")}{" "}
+              <a
+                className="underline"
+                href="https://apps.apple.com/account/subscriptions"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t("manage_subscriptions")}
+              </a>
+            </p>
+          )}
+
+        {user?.subscription?.active &&
+          user.subscription.provider === "GOOGLE" && (
+            <p className="text-sm border border-primary rounded-md p-2">
+              {t("delete_account_google_subscription_notice")}
+            </p>
+          )}
+
         <div>
           <TextInput
             value={password}

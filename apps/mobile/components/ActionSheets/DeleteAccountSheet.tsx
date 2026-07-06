@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
 import ActionSheet, {
   ActionSheetRef,
   SheetManager,
@@ -113,6 +113,37 @@ export default function DeleteAccountSheet() {
           archived data you own. It will also log you out. This action is
           irreversible!
         </Text>
+
+        {user?.subscription?.active &&
+        user.subscription.provider === "APPLE" ? (
+          <View className="border border-neutral-content p-3 rounded-md mt-5">
+            <Text className="text-base-content">
+              Deleting your account won't cancel your App Store subscription. To
+              stop future charges, cancel it from your Apple ID's subscription
+              settings.
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() =>
+                Linking.openURL("https://apps.apple.com/account/subscriptions")
+              }
+            >
+              <Text className="text-primary font-semibold mt-2">
+                Manage subscriptions
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {user?.subscription?.active &&
+        user.subscription.provider === "GOOGLE" ? (
+          <View className="border border-neutral-content p-3 rounded-md mt-5">
+            <Text className="text-base-content">
+              Your Google Play subscription's auto-renewal will be cancelled
+              automatically when your account is deleted.
+            </Text>
+          </View>
+        ) : null}
 
         {user?.hasPassword ? (
           <>

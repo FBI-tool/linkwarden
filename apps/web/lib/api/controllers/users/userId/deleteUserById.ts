@@ -6,6 +6,10 @@ import updateSeats from "@/lib/api/billing/updateSeats";
 import { meiliClient } from "@linkwarden/lib/meilisearchClient";
 import stripeSDK from "@/lib/api/billing/stripeSDK";
 import { isStoreBillingConfigured } from "@/lib/api/billing/syncStoreSubscription";
+import {
+  cancelGoogleSubscription,
+  isGooglePlayConfigured,
+} from "@/lib/api/billing/googlePlay";
 import transporter from "@linkwarden/lib/transporter";
 
 export default async function deleteUserById(
@@ -216,6 +220,31 @@ export default async function deleteUserById(
                 user.parentSubscription.stripeSubscriptionId,
                 user.parentSubscription.quantity - 1
               );
+            }
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        // A Play Store subscription can be cancelled server-side (auto-renew is
+        // turned off; it stays paid-up until the period ends). App Store
+        // subscriptions have no cancellation API — the UI tells those users to
+        // cancel through Apple instead.
+        if (isGooglePlayConfigured()) {
+          try {
+            const subscription =
+              queryId === userId
+                ? user.subscriptions
+                : await prisma.subscription.findFirst({
+                    where: { userId: queryId },
+                    select: { provider: true, googlePurchaseToken: true },
+                  });
+
+            if (
+              subscription?.provider === "GOOGLE" &&
+              subscription.googlePurchaseToken
+            ) {
+              await cancelGoogleSubscription(subscription.googlePurchaseToken);
             }
           } catch (err) {
             console.log(err);

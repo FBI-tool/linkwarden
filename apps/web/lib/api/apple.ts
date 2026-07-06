@@ -1,7 +1,7 @@
 import { createSign } from "crypto";
-import { readFileSync } from "fs";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import * as process from "process";
+import readSecret from "./readSecret";
 
 const appleIssuer = "https://appleid.apple.com";
 const appleJwks = createRemoteJWKSet(new URL(`${appleIssuer}/auth/keys`));
@@ -27,10 +27,11 @@ export function getAppleClientId() {
 function getApplePrivateKey() {
   if (applePrivateKey) return applePrivateKey;
 
-  if (!process.env.APPLE_PRIVATE_KEY_PATH)
-    throw Error("Apple private key path is not configured.");
+  const privateKey = readSecret(process.env.APPLE_PRIVATE_KEY_PATH);
 
-  applePrivateKey = readFileSync(process.env.APPLE_PRIVATE_KEY_PATH, "utf8");
+  if (!privateKey) throw Error("Apple private key is not configured.");
+
+  applePrivateKey = privateKey;
 
   return applePrivateKey;
 }
@@ -65,12 +66,10 @@ function createAppleClientSecret() {
   const unsignedToken = `${base64UrlEncode(header)}.${base64UrlEncode(
     payload
   )}`;
-  const signature = createSign("SHA256")
-    .update(unsignedToken)
-    .sign({
-      key: getApplePrivateKey(),
-      dsaEncoding: "ieee-p1363",
-    });
+  const signature = createSign("SHA256").update(unsignedToken).sign({
+    key: getApplePrivateKey(),
+    dsaEncoding: "ieee-p1363",
+  });
 
   return {
     value: `${unsignedToken}.${base64UrlEncode(signature)}`,

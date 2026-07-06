@@ -8,6 +8,7 @@ import {
   type LastTransactionsItem,
   type StatusResponse,
 } from "@apple/app-store-server-library";
+import readSecret from "../readSecret";
 
 const BUNDLE_ID = process.env.APP_STORE_BUNDLE_ID || "app.linkwarden";
 
@@ -28,8 +29,7 @@ const getClient = (environment: Environment) => {
 
   if (!clients[environment]) {
     clients[environment] = new AppStoreServerAPIClient(
-      // Deployment tooling often stores the .p8 with literal \n sequences
-      (process.env.APP_STORE_PRIVATE_KEY as string).replace(/\\n/g, "\n"),
+      readSecret(process.env.APP_STORE_PRIVATE_KEY) as string,
       process.env.APP_STORE_KEY_ID as string,
       process.env.APP_STORE_ISSUER_ID as string,
       BUNDLE_ID,
@@ -154,7 +154,8 @@ export default async function getAppleSubscriptionState(
         !entry.transaction.revocationDate
     ) ??
     decorated.sort(
-      (a, b) => (b.transaction.expiresDate ?? 0) - (a.transaction.expiresDate ?? 0)
+      (a, b) =>
+        (b.transaction.expiresDate ?? 0) - (a.transaction.expiresDate ?? 0)
     )[0];
 
   const { item, transaction, renewalInfo } = best;

@@ -1,4 +1,5 @@
 import { JWT } from "google-auth-library";
+import readSecret from "../readSecret";
 
 const PACKAGE_NAME = process.env.GOOGLE_PLAY_PACKAGE_NAME || "app.linkwarden";
 const API_BASE = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}`;
@@ -17,11 +18,7 @@ const getClient = () => {
     );
 
   if (!client) {
-    // Accept both raw and base64-encoded service-account JSON
-    const json = raw.trim().startsWith("{")
-      ? raw
-      : Buffer.from(raw, "base64").toString("utf8");
-    const credentials = JSON.parse(json) as {
+    const credentials = JSON.parse(readSecret(raw) as string) as {
       client_email: string;
       private_key: string;
     };
@@ -129,7 +126,9 @@ export default async function getGoogleSubscriptionState(
       purchase.outOfAppPurchaseContext?.expiredPurchaseToken ?? null,
     needsAcknowledgement:
       purchase.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING",
-    currentPeriodStart: purchase.startTime ? new Date(purchase.startTime) : null,
+    currentPeriodStart: purchase.startTime
+      ? new Date(purchase.startTime)
+      : null,
     currentPeriodEnd: expiryTime,
     raw: purchase,
   };

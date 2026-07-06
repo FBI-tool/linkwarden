@@ -68,6 +68,26 @@ export default function DeleteOwnAccountModal({ onClose }: Props) {
       <div className="flex flex-col gap-3">
         <p>{t("delete_warning")}</p>
 
+        {user?.subscription?.active &&
+          user.subscription.provider === "APPLE" && (
+            <p>
+              {t("delete_account_apple_subscription_notice")}{" "}
+              <a
+                className="underline text-primary"
+                href="https://apps.apple.com/account/subscriptions"
+                target="_blank"
+                rel="noreferrer"
+              >
+                https://apps.apple.com/account/subscriptions
+              </a>
+            </p>
+          )}
+
+        {user?.subscription?.active &&
+          user.subscription.provider === "GOOGLE" && (
+            <p>{t("delete_account_google_subscription_notice")}</p>
+          )}
+
         {user?.hasPassword ? (
           <div>
             <p className="mb-2 font-semibold">{t("confirm_password")}</p>

@@ -8,6 +8,7 @@ import ProfilePhoto from "@/components/ProfilePhoto";
 import React from "react";
 import Link from "next/link";
 import EmailChangeVerificationModal from "@/components/ModalContent/EmailChangeVerificationModal";
+import DeleteOwnAccountModal from "@/components/ModalContent/DeleteOwnAccountModal";
 import { Button } from "@/components/ui/button";
 import { i18n } from "next-i18next.config";
 import { useTranslation } from "next-i18next";
@@ -29,6 +30,7 @@ import { NextPageWithLayout } from "../_app";
 const Page: NextPageWithLayout = () => {
   const [emailChangeVerificationModal, setEmailChangeVerificationModal] =
     useState(false);
+  const [deleteAccountModal, setDeleteAccountModal] = useState(false);
   const [submitLoader, setSubmitLoader] = useState(false);
   const { data: account } = useUser();
   const updateUser = useUpdateUser();
@@ -341,10 +343,19 @@ const Page: NextPageWithLayout = () => {
           </p>
         </div>
 
-        <Link href="/settings/delete" className="underline">
-          {t("account_deletion_page")}
-        </Link>
+        <Button
+          onClick={() => setDeleteAccountModal(true)}
+          variant="destructive"
+          size="sm"
+          className="w-fit"
+        >
+          {t("delete_account")}
+        </Button>
       </div>
+
+      {deleteAccountModal && (
+        <DeleteOwnAccountModal onClose={() => setDeleteAccountModal(false)} />
+      )}
 
       {emailChangeVerificationModal && (
         <EmailChangeVerificationModal

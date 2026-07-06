@@ -110,6 +110,15 @@ export default function SubscribeScreen() {
     Platform.OS !== "ios"
   );
 
+  const showForeignPurchaseAlert = () => {
+    Alert.alert(
+      "Subscription already in use",
+      Platform.OS === "ios"
+        ? "The App Store subscription on this device belongs to a different Linkwarden account. Sign in with that account to use it, or subscribe with a different Apple Account."
+        : "The Google Play subscription on this device belongs to a different Linkwarden account. Sign in with that account to use it, or subscribe with a different Google account."
+    );
+  };
+
   const activateSubscription = async () => {
     for (let attempt = 0; attempt < 8; attempt++) {
       const { data } = await refetchUser();
@@ -145,13 +154,15 @@ export default function SubscribeScreen() {
         purchase
       );
 
-      if (verified) {
+      if (verified.active) {
         // Only finish after the server has validated it — unfinished purchases are
         // redelivered on the next launch, which is the retry mechanism.
         await finishTransaction({ purchase, isConsumable: false }).catch(
           () => {}
         );
         await activateSubscription();
+      } else if (verified.foreignAccount) {
+        showForeignPurchaseAlert();
       } else {
         Alert.alert(
           "Subscription syncing",
@@ -174,6 +185,11 @@ export default function SubscribeScreen() {
     onPurchaseSuccess: handlePurchaseSuccess,
     onPurchaseError: (error) => {
       setPurchaseLoading(false);
+
+      if (error.code === ErrorCode.AlreadyOwned) {
+        restorePurchases();
+        return;
+      }
 
       if (
         error.code !== ErrorCode.UserCancelled &&
@@ -334,19 +350,26 @@ export default function SubscribeScreen() {
       );
 
       let restored = false;
+      let foreignAccount = false;
 
       for (const purchase of owned) {
-        if (await verifyPurchaseWithServer(auth, purchase)) {
+        const result = await verifyPurchaseWithServer(auth, purchase);
+
+        if (result.active) {
           await finishTransaction({ purchase, isConsumable: false }).catch(
             () => {}
           );
           restored = true;
           break;
         }
+
+        if (result.foreignAccount) foreignAccount = true;
       }
 
       if (restored) {
         await activateSubscription();
+      } else if (foreignAccount) {
+        showForeignPurchaseAlert();
       } else {
         Alert.alert("No purchases found", "No active purchases were found.");
       }
@@ -378,13 +401,26 @@ export default function SubscribeScreen() {
         SUBSCRIPTION_SKUS.includes(purchase.productId)
       );
 
-      if (owned && (await verifyPurchaseWithServer(auth, owned))) {
-        await finishTransaction({ purchase: owned, isConsumable: false }).catch(
-          () => {}
-        );
-        await activateSubscription();
-        setPurchaseLoading(false);
-        return;
+      if (owned) {
+        const result = await verifyPurchaseWithServer(auth, owned);
+
+        if (result.active) {
+          await finishTransaction({
+            purchase: owned,
+            isConsumable: false,
+          }).catch(() => {});
+          await activateSubscription();
+          setPurchaseLoading(false);
+          return;
+        }
+
+        // The store won't sell this product again to the same store account, so
+        // don't even open the payment sheet — explain instead.
+        if (result.foreignAccount) {
+          showForeignPurchaseAlert();
+          setPurchaseLoading(false);
+          return;
+        }
       }
 
       const { sku, offerToken } = selectedPlan.option;

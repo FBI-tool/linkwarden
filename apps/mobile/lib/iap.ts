@@ -154,6 +154,12 @@ export const getPlanOption = (
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export type VerifyPurchaseResult = {
+  active: boolean;
+  // The store subscription is linked to a different Linkwarden account
+  foreignAccount: boolean;
+};
+
 // Asks the server to validate the purchase with Apple/Google and activate the
 // subscription. The identifiers are only lookup keys — the server re-fetches the
 // authoritative state from the store, so retrying is always safe.
@@ -161,7 +167,7 @@ export const verifyPurchaseWithServer = async (
   auth: MobileAuth,
   purchase: Purchase,
   attempts = 5
-): Promise<boolean> => {
+): Promise<VerifyPurchaseResult> => {
   const body =
     Platform.OS === "ios"
       ? {
@@ -188,15 +194,21 @@ export const verifyPurchaseWithServer = async (
 
       if (res.ok) {
         const data = await res.json().catch(() => null);
-        return Boolean(data?.active);
+        return { active: Boolean(data?.active), foreignAccount: false };
       }
 
       // Client errors won't succeed on retry (bad token, foreign purchase, ...)
-      if (res.status >= 400 && res.status < 500) return false;
+      if (res.status >= 400 && res.status < 500) {
+        const data = await res.json().catch(() => null);
+        return {
+          active: false,
+          foreignAccount: data?.code === "purchase_linked_to_another_account",
+        };
+      }
     } catch {}
 
     await wait(1500);
   }
 
-  return false;
+  return { active: false, foreignAccount: false };
 };

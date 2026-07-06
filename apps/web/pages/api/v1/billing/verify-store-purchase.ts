@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import verifyToken from "@/lib/api/verifyToken";
 import { prisma } from "@linkwarden/prisma";
 import syncStoreSubscription, {
+  FOREIGN_PURCHASE,
   type StorePurchaseHint,
 } from "@/lib/api/billing/syncStoreSubscription";
 import { isAppStoreConfigured } from "@/lib/api/billing/appStore";
@@ -74,7 +75,15 @@ export default async function verifyStorePurchase(
         : "No active subscription found for this purchase.",
       active: Boolean(subscription?.active),
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === FOREIGN_PURCHASE) {
+      return res.status(409).json({
+        response: "This purchase is linked to another Linkwarden account.",
+        code: "purchase_linked_to_another_account",
+        active: false,
+      });
+    }
+
     console.error("Error verifying store purchase:", error);
     return res.status(500).json({ response: "Server Error" });
   }

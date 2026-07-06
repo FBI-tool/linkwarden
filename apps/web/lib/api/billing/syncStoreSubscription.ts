@@ -16,6 +16,16 @@ export const UUID_REGEX =
 export const isStoreBillingConfigured = () =>
   isAppStoreConfigured() || isGooglePlayConfigured();
 
+// Error code thrown (hint-driven syncs only) when the store purchase is stamped
+// with a different Linkwarden account, so the API layer can surface a precise
+// error to the app.
+export const FOREIGN_PURCHASE = "FOREIGN_PURCHASE";
+
+const foreignPurchaseError = () =>
+  Object.assign(new Error("This purchase is linked to another account."), {
+    code: FOREIGN_PURCHASE,
+  });
+
 // Sandbox/TestFlight and Play license-tester purchases only grant entitlements in
 // production when explicitly allowed (e.g. during App Review).
 const acceptsSandbox = () =>
@@ -263,7 +273,7 @@ export default async function syncStoreSubscription(
       console.warn(
         `App Store transaction ${state.originalTransactionId} belongs to another account.`
       );
-      return null;
+      throw foreignPurchaseError();
     }
 
     if (!shouldGrant(state) || !state.active)
@@ -291,7 +301,7 @@ export default async function syncStoreSubscription(
       console.warn(
         "Play Store purchase token belongs to another account (obfuscated id mismatch)."
       );
-      return null;
+      throw foreignPurchaseError();
     }
 
     if (!shouldGrant(state) || !state.active)

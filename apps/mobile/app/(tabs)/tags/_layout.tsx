@@ -1,7 +1,9 @@
 import { Stack, useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { rawTheme, ThemeName } from "@/lib/colors";
-import { Platform } from "react-native";
+import { Platform, TouchableOpacity } from "react-native";
+import { SheetManager } from "react-native-actions-sheet";
 import TabBarSafeArea from "@/components/TabBarSafeArea";
 
 export default function Layout() {
@@ -52,7 +54,21 @@ export default function Layout() {
                   : "white",
           },
         }}
-      />
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            headerRight: () => (
+              <TouchableOpacity onPress={() => SheetManager.show("add-tag-sheet")}>
+                <Plus
+                  size={21}
+                  color={rawTheme[colorScheme as ThemeName].primary}
+                />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+      </Stack>
     </TabBarSafeArea>
   );
 }

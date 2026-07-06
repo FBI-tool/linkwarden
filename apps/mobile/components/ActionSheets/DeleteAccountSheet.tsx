@@ -116,11 +116,11 @@ export default function DeleteAccountSheet() {
 
         {user?.subscription?.active &&
         user.subscription.provider === "APPLE" ? (
-          <View className="border border-neutral-content p-3 rounded-md mt-5">
+          <View className="mt-3">
             <Text className="text-base-content">
-              Deleting your account won't cancel your App Store subscription. To
-              stop future charges, cancel it from your Apple ID's subscription
-              settings.
+              Note: Deleting your account will not cancel your App Store
+              subscription. To avoid future charges, cancel the subscription in
+              your Apple ID settings or use the following link:
             </Text>
             <TouchableOpacity
               activeOpacity={0.7}
@@ -129,7 +129,7 @@ export default function DeleteAccountSheet() {
               }
             >
               <Text className="text-primary font-semibold mt-2">
-                Manage subscriptions
+                https://apps.apple.com/account/subscriptions
               </Text>
             </TouchableOpacity>
           </View>

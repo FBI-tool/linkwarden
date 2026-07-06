@@ -10,6 +10,7 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { nativeApplicationVersion } from "expo-application";
 import { useColorScheme } from "nativewind";
@@ -30,7 +31,9 @@ import {
   Smartphone,
   Sun,
   Trash2,
+  UserX,
 } from "lucide-react-native";
+import { SheetManager } from "react-native-actions-sheet";
 import { clearCache } from "@/lib/cache";
 import {
   formatBytes,
@@ -378,6 +381,21 @@ export default function SettingsScreen() {
                 <Text className="text-base-content">
                   support@linkwarden.app
                 </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View>
+          <Text className="mb-4 mx-4 text-neutral">Account Deletion</Text>
+          <View className="bg-base-200 rounded-xl flex-col">
+            <TouchableOpacity
+              className="flex-row gap-2 items-center justify-between py-3 px-4"
+              onPress={() => SheetManager.show("delete-account-sheet")}
+            >
+              <View className="flex-row items-center gap-2">
+                <UserX size={20} color="red" />
+                <Text className="text-red-500">Delete Account</Text>
               </View>
             </TouchableOpacity>
           </View>

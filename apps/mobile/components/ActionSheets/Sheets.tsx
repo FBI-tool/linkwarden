@@ -7,6 +7,7 @@ import SupportSheet from "./SupportSheet";
 import AddLinkSheet from "./AddLinkSheet";
 import EditLinkSheet from "./EditLinkSheet";
 import NewCollectionSheet from "./NewCollectionSheet";
+import AddTagSheet from "./AddTagSheet";
 import LinkDetailsSheet from "./LinkDetailsSheet";
 import ReadableHighlightSheet, {
   ReadableHighlightDraft,
@@ -28,6 +29,7 @@ registerSheet("add-link-sheet", AddLinkSheet);
 registerSheet("link-details-sheet", LinkDetailsSheet);
 registerSheet("edit-link-sheet", EditLinkSheet);
 registerSheet("new-collection-sheet", NewCollectionSheet);
+registerSheet("add-tag-sheet", AddTagSheet);
 registerSheet("readable-highlight-sheet", ReadableHighlightSheet);
 registerSheet("readable-highlights-sheet", ReadableHighlightsSheet);
 registerSheet("reader-settings-sheet", ReaderSettingsSheet);
@@ -63,6 +65,7 @@ declare module "react-native-actions-sheet" {
       };
     }>;
     "new-collection-sheet": SheetDefinition;
+    "add-tag-sheet": SheetDefinition;
     "readable-highlight-sheet": SheetDefinition<{
       payload: {
         draft: ReadableHighlightDraft;

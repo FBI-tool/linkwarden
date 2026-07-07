@@ -108,7 +108,7 @@ export default function DeleteAccountSheet() {
       />
 
       <View className="px-8 pb-5">
-        <Text>
+        <Text className="text-base-content">
           This will permanently delete all the Links, Collections, Tags, and
           archived data you own. It will also log you out. This action is
           irreversible!

@@ -27,7 +27,10 @@ export default async function archiveHandler(
   browser: Browser
 ) {
   const user = link.collection?.owner;
-  let skipPreservation = process.env.DISABLE_PRESERVATION === "true";
+
+  let skipPreservation =
+    (process.env.DISABLE_BROWSER || process.env.DISABLE_PRESERVATION) ===
+    "true";
 
   if (!skipPreservation && link.url) {
     try {

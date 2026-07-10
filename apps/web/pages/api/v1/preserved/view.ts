@@ -16,7 +16,9 @@ const normalizeHost = (value: string, protocol = "https:") => {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  const urlValue = trimmed.includes("://") ? trimmed : `${protocol}//${trimmed}`;
+  const urlValue = trimmed.includes("://")
+    ? trimmed
+    : `${protocol}//${trimmed}`;
 
   try {
     const parsed = new URL(urlValue);
@@ -33,7 +35,10 @@ const normalizeHost = (value: string, protocol = "https:") => {
   }
 };
 
-const getForwardedHeaderValue = (forwarded?: string | string[], key?: string) => {
+const getForwardedHeaderValue = (
+  forwarded?: string | string[],
+  key?: string
+) => {
   const headerValue = getSingleValue(forwarded);
   if (!headerValue || !key) return undefined;
 
@@ -65,10 +70,7 @@ const getRequestHost = (req: NextApiRequest, protocol: string) => {
   return normalizeHost(host, protocol);
 };
 
-const getDownloadFilename = (
-  format: ArchivedFormat,
-  filePath: string
-) => {
+const getDownloadFilename = (format: ArchivedFormat, filePath: string) => {
   const suffix = path.posix.extname(filePath) || "";
 
   switch (format) {
@@ -116,7 +118,9 @@ export default async function handler(
   try {
     const encodedToken = getSingleValue(req.query.token);
     if (!encodedToken) {
-      return res.status(401).json({ response: "Missing archived format token." });
+      return res
+        .status(401)
+        .json({ response: "Missing archived format token." });
     }
 
     const token = await decodePreservedFormatToken(encodedToken);
@@ -125,7 +129,9 @@ export default async function handler(
       token.scope !== PRESERVED_FORMAT_SCOPE ||
       token.exp <= Math.floor(Date.now() / 1000)
     ) {
-      return res.status(401).json({ response: "Invalid archived format token." });
+      return res
+        .status(401)
+        .json({ response: "Invalid archived format token." });
     }
 
     const { file, contentType, status } = await readFile(token.filePath);
@@ -133,17 +139,23 @@ export default async function handler(
       return res.status(status as number).send(file);
     }
 
+    const isDownload = getSingleValue(req.query.download) === "1";
+
     res
       .setHeader(
         "Content-Type",
-        contentType === "text/html"
-          ? "text/html; charset=utf-8"
-          : contentType
+        contentType === "text/html" ? "text/html; charset=utf-8" : contentType
       )
       .setHeader("Cache-Control", "private, no-store")
-      .setHeader("X-Robots-Tag", "noindex, nofollow");
+      .setHeader("X-Robots-Tag", "noindex, nofollow")
+      .setHeader("X-Content-Type-Options", "nosniff");
+    // Block script execution when serving user-controlled HTML inline (stored
+    // XSS). Skipped for downloads, which aren't rendered as a document.
+    if (!isDownload && contentType?.startsWith("text/html")) {
+      res.setHeader("Content-Security-Policy", "sandbox");
+    }
 
-    if (getSingleValue(req.query.download) === "1") {
+    if (isDownload) {
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="${getDownloadFilename(

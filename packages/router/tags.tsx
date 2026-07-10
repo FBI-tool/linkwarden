@@ -319,18 +319,24 @@ const useUpdateTag = () => {
   });
 };
 
-const useUpsertTags = () => {
+const useUpsertTags = (auth?: MobileAuth) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (tags: ArchivalTagOption[]) => {
-      const response = await fetch("/api/v1/tags", {
-        body: JSON.stringify({ tags }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
+      const response = await fetch(
+        (auth?.instance ? auth.instance : "") + "/api/v1/tags",
+        {
+          body: JSON.stringify({ tags }),
+          headers: {
+            "Content-Type": "application/json",
+            ...(auth?.session
+              ? { Authorization: `Bearer ${auth.session}` }
+              : {}),
+          },
+          method: "POST",
+        }
+      );
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.response);

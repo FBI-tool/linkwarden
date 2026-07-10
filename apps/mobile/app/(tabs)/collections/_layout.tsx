@@ -1,7 +1,10 @@
 import { Stack, useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { rawTheme, ThemeName } from "@/lib/colors";
-import { Platform } from "react-native";
+import { Platform, TouchableOpacity } from "react-native";
+import { SheetManager } from "react-native-actions-sheet";
+import TabBarSafeArea from "@/components/TabBarSafeArea";
 
 export default function Layout() {
   const router = useRouter();
@@ -11,44 +14,65 @@ export default function Layout() {
     Platform.OS === "ios" && parseInt(Platform.Version, 10) >= 26;
 
   return (
-    <Stack
-      screenOptions={{
-        headerTitle: "Collections",
-        headerLargeTitle: true,
-        headerTintColor: colorScheme === "dark" ? "white" : "black",
-        headerTransparent: Platform.OS === "ios",
-        headerSearchBarOptions: {
-          placeholder: "Search Collections",
-          autoCapitalize: "none",
-          ...(isIOS26Plus && {
-            allowToolbarIntegration: false,
-            placement: "integratedButton",
-          }),
-          onChangeText: (e) => {
-            router.setParams({
-              search: encodeURIComponent(e.nativeEvent.text),
-            });
+    <TabBarSafeArea>
+      <Stack
+        screenOptions={{
+          headerTitle: "Collections",
+          headerLargeTitle: true,
+          headerTintColor: colorScheme === "dark" ? "white" : "black",
+          headerTransparent: Platform.OS === "ios",
+          headerSearchBarOptions: {
+            placeholder: "Search Collections",
+            autoCapitalize: "none",
+            ...(isIOS26Plus && {
+              allowToolbarIntegration: false,
+              placement: "integratedButton",
+            }),
+            onChangeText: (e) => {
+              router.setParams({
+                search: encodeURIComponent(e.nativeEvent.text),
+              });
+            },
+            headerIconColor: colorScheme === "dark" ? "white" : "black",
           },
-          headerIconColor: colorScheme === "dark" ? "white" : "black",
-        },
-        headerShadowVisible: false,
-        headerBlurEffect:
-          colorScheme === "dark" ? "systemMaterialDark" : "systemMaterial",
+          headerShadowVisible: false,
+          headerBlurEffect: isIOS26Plus
+            ? undefined
+            : colorScheme === "dark"
+              ? "systemMaterialDark"
+              : "systemMaterial",
 
-        headerLargeStyle: {
-          backgroundColor: isIOS26Plus
-            ? "transparent"
-            : rawTheme[colorScheme as ThemeName]["base-100"],
-        },
-        headerStyle: {
-          backgroundColor:
-            Platform.OS === "ios"
+          headerLargeStyle: {
+            backgroundColor: isIOS26Plus
               ? "transparent"
-              : colorScheme === "dark"
-                ? rawTheme["dark"]["base-100"]
-                : "white",
-        },
-      }}
-    />
+              : rawTheme[colorScheme as ThemeName]["base-100"],
+          },
+          headerStyle: {
+            backgroundColor:
+              Platform.OS === "ios"
+                ? "transparent"
+                : colorScheme === "dark"
+                  ? rawTheme["dark"]["base-100"]
+                  : "white",
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => SheetManager.show("new-collection-sheet")}
+              >
+                <Plus
+                  size={21}
+                  color={rawTheme[colorScheme as ThemeName].primary}
+                />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+      </Stack>
+    </TabBarSafeArea>
   );
 }

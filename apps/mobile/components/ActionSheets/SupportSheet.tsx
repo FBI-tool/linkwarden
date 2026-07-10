@@ -1,11 +1,12 @@
 import { Text, View } from "react-native";
 import { useState } from "react";
-import ActionSheet from "react-native-actions-sheet";
+import ActionSheet, { SheetManager } from "react-native-actions-sheet";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import { useColorScheme } from "nativewind";
 import * as Clipboard from "expo-clipboard";
 import { Button } from "../ui/Button";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import SheetHeader from "./SheetHeader";
 
 export default function SupportSheet() {
   const { colorScheme } = useColorScheme();
@@ -19,19 +20,29 @@ export default function SupportSheet() {
 
   const insets = useSafeAreaInsets();
 
+  const closeSheet = () => {
+    SheetManager.hide("support-sheet");
+  };
+
   return (
     <ActionSheet
       gestureEnabled
       indicatorStyle={{
-        backgroundColor: rawTheme[colorScheme as ThemeName]["neutral-content"],
+        display: "none",
       }}
       containerStyle={{
         backgroundColor: rawTheme[colorScheme as ThemeName]["base-100"],
       }}
       safeAreaInsets={insets}
     >
-      <View className="px-8 py-5 flex-col gap-4">
-        <Text className="text-2xl font-bold text-base-content">Need help?</Text>
+      <SheetHeader
+        title="Need help?"
+        onClose={closeSheet}
+        titleClassName="text-2xl"
+        align="left"
+      />
+
+      <View className="px-8 pb-5 flex-col gap-4">
         <Text className="text-base-content">
           Whether you have a question or need assistance, feel free to reach out
           to us at support@linkwarden.app

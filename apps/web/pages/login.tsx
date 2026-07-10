@@ -7,7 +7,6 @@ import React, { useState, FormEvent } from "react";
 import { toast } from "react-hot-toast";
 import { getLogins } from "./api/v1/logins";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
-import InstallApp from "@/components/InstallApp";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { i18n } from "next-i18next.config";
 import { getToken } from "next-auth/jwt";
@@ -78,7 +77,7 @@ export default function Login({
 
     const load = toast.loading(t("authenticating"));
 
-    const res = await signIn(method, {});
+    await signIn(method, {});
 
     toast.dismiss(load);
 
@@ -89,12 +88,6 @@ export default function Login({
     if (availableLogins.credentialsEnabled === "true") {
       return (
         <>
-          <p className="text-3xl text-black dark:text-white text-center font-extralight">
-            {t("enter_credentials")}
-          </p>
-
-          <Separator />
-
           {process.env.NEXT_PUBLIC_DEMO === "true" &&
             process.env.NEXT_PUBLIC_DEMO_USERNAME &&
             process.env.NEXT_PUBLIC_DEMO_PASSWORD && (
@@ -156,16 +149,14 @@ export default function Login({
             )}
 
           <div>
-            <p className="text-sm text-black dark:text-white w-fit font-semibold mb-1">
-              {availableLogins.emailEnabled === "true"
-                ? t("username_or_email")
-                : t("username")}
-            </p>
-
             <TextInput
               name="username"
               autoFocus={true}
-              placeholder="johnny"
+              placeholder={
+                availableLogins.emailEnabled === "true"
+                  ? t("username_or_email")
+                  : t("username")
+              }
               value={form.username}
               className="bg-base-100"
               data-testid="username-input"
@@ -173,13 +164,9 @@ export default function Login({
             />
           </div>
           <div className="w-full">
-            <p className="text-sm text-black dark:text-white w-fit font-semibold mb-1">
-              {t("password")}
-            </p>
-
             <TextInput
               type="password"
-              placeholder="••••••••••••••"
+              placeholder={t("password")}
               value={form.password}
               className="bg-base-100"
               data-testid="password-input"
@@ -210,7 +197,7 @@ export default function Login({
           {availableLogins.buttonAuths.length > 0 && (
             <div className="flex items-center gap-2">
               <Separator className="my-1 flex-1 w-auto" />
-              <p className="whitespace-nowrap">{t("or_continue_with")}</p>
+              <p className="whitespace-nowrap">{t("or")}</p>
               <Separator className="my-1 flex-1 w-auto" />
             </div>
           )}
@@ -231,11 +218,19 @@ export default function Login({
             variant="metal"
             disabled={submitLoader}
           >
-            {value.name.toLowerCase() === "google" ||
-              (value.name.toLowerCase() === "apple" && (
-                <i className={"bi-" + value.name.toLowerCase()}></i>
-              ))}
-            {value.name}
+            {value.name.toLowerCase() === "google" ? (
+              <>
+                <i className={"bi-google"}></i>
+                {t("continue_with_google")}
+              </>
+            ) : value.name.toLowerCase() === "apple" ? (
+              <>
+                <i className={"bi-apple"}></i>
+                {t("continue_with_apple")}
+              </>
+            ) : (
+              value.name
+            )}
           </Button>
         </React.Fragment>
       );
@@ -263,10 +258,10 @@ export default function Login({
   }
 
   return (
-    <CenteredForm text={t("sign_in_to_your_account")}>
+    <CenteredForm header={t("sign_in_to_linkwarden")}>
       <form onSubmit={loginUser}>
         <div
-          className="p-4 mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-slate-50 dark:bg-neutral-800 rounded-xl shadow-md border border-sky-100 dark:border-neutral-700"
+          className="mx-auto flex flex-col gap-3 justify-between max-w-md min-w-80 w-full"
           data-testid="login-form"
         >
           {displayLoginCredential()}
@@ -274,7 +269,6 @@ export default function Login({
           {displayRegistration()}
         </div>
       </form>
-      <InstallApp />
     </CenteredForm>
   );
 }

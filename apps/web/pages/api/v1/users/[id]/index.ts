@@ -3,10 +3,12 @@ import getUserById from "@/lib/api/controllers/users/userId/getUserById";
 import updateUserById from "@/lib/api/controllers/users/userId/updateUserById";
 import deleteUserById from "@/lib/api/controllers/users/userId/deleteUserById";
 import { prisma } from "@linkwarden/prisma";
-import verifySubscription from "@/lib/api/stripe/verifySubscription";
+import verifySubscription from "@/lib/api/billing/verifySubscription";
+import { isStoreBillingConfigured } from "@/lib/api/billing/syncStoreSubscription";
 import verifyToken from "@/lib/api/verifyToken";
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const BILLING_ENABLED =
+  Boolean(process.env.STRIPE_SECRET_KEY) || isStoreBillingConfigured();
 
 export default async function users(req: NextApiRequest, res: NextApiResponse) {
   const token = await verifyToken({ req });
@@ -40,7 +42,10 @@ export default async function users(req: NextApiRequest, res: NextApiResponse) {
     return res.status(users.status).json({ response: users.response });
   }
 
-  if (STRIPE_SECRET_KEY) {
+  // Non-subscribers (when billing is enabled) are normally blocked below, but they are still allowed to delete their own account. The password check is only bypassed for accounts that don't have a password (e.g. SSO users).
+  let bypassPasswordForDeletion = false;
+
+  if (BILLING_ENABLED) {
     const user = await prisma.user.findUnique({
       where: {
         id: token.id,
@@ -54,10 +59,16 @@ export default async function users(req: NextApiRequest, res: NextApiResponse) {
     if (user) {
       const subscribedUser = await verifySubscription(user);
       if (!subscribedUser) {
-        return res.status(401).json({
-          response:
-            "You are not a subscriber, feel free to reach out to us at support@linkwarden.app if you think this is an issue.",
-        });
+        const isSelfDeletion = req.method === "DELETE" && userId === queryId;
+
+        if (!isSelfDeletion) {
+          return res.status(401).json({
+            response:
+              "You are not a subscriber, feel free to reach out to us at support@linkwarden.app if you think this is an issue.",
+          });
+        }
+
+        bypassPasswordForDeletion = !user.password;
       }
     } else {
       return res.status(404).json({ response: "User not found." });
@@ -87,7 +98,8 @@ export default async function users(req: NextApiRequest, res: NextApiResponse) {
       userId,
       req.body,
       isServerAdmin,
-      queryId
+      queryId,
+      bypassPasswordForDeletion
     );
     return res.status(updated.status).json({ response: updated.response });
   }

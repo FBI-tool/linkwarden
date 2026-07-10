@@ -1,12 +1,6 @@
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Platform,
-  Text,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList, Text, ActivityIndicator } from "react-native";
 import useAuthStore from "@/store/auth";
+import EmptyState from "@/components/EmptyState";
 import CollectionListing from "@/components/CollectionListing";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -36,9 +30,17 @@ export default function CollectionsScreen() {
     setFilteredCollections(filter);
   }, [search, collections.data]);
 
+  const refreshControl = (
+    <Spinner
+      refreshing={collections.isRefetching}
+      onRefresh={() => collections.refetch()}
+      progressBackgroundColor={rawTheme[colorScheme as ThemeName]["base-200"]}
+      colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
+    />
+  );
+
   return (
     <View
-      style={styles.container}
       className="h-full bg-base-100"
       collapsable={false}
       collapsableChildren={false}
@@ -48,21 +50,14 @@ export default function CollectionsScreen() {
           <ActivityIndicator size="large" />
           <Text className="text-base mt-2.5 text-neutral">Loading...</Text>
         </View>
+      ) : filteredCollections.length === 0 ? (
+        <EmptyState refreshControl={refreshControl} />
       ) : (
         <FlatList
           contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={() => <></>}
           data={filteredCollections}
-          refreshControl={
-            <Spinner
-              refreshing={collections.isRefetching}
-              onRefresh={() => collections.refetch()}
-              progressBackgroundColor={
-                rawTheme[colorScheme as ThemeName]["base-200"]
-              }
-              colors={[rawTheme[colorScheme as ThemeName]["base-content"]]}
-            />
-          }
+          refreshControl={refreshControl}
           refreshing={collections.isRefetching}
           initialNumToRender={4}
           keyExtractor={(item) => item.id?.toString() || ""}
@@ -71,24 +66,8 @@ export default function CollectionsScreen() {
           ItemSeparatorComponent={() => (
             <View className="bg-neutral-content h-px" />
           )}
-          ListEmptyComponent={
-            <View className="flex justify-center py-10 items-center">
-              <Text className="text-center text-xl text-neutral">
-                Nothing found...
-              </Text>
-            </View>
-          }
         />
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 83,
-    },
-    default: {},
-  }),
-});

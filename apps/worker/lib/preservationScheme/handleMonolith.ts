@@ -2,6 +2,8 @@ import { spawn } from "child_process";
 import { createFile } from "@linkwarden/filesystem";
 import { prisma } from "@linkwarden/prisma";
 import { Link } from "@linkwarden/prisma/client";
+import sanitizeHtmlForMonolith from "./sanitizeHtmlForMonolith";
+import { getSsrfProxyUrl } from "../ssrfProxy";
 
 export default async function handleMonolith(
   link: Link,
@@ -9,6 +11,13 @@ export default async function handleMonolith(
   signal: AbortSignal
 ): Promise<void> {
   if (!link.url) return;
+
+  const pageContent = await sanitizeHtmlForMonolith(htmlFromPage, link.url);
+
+  const proxyUrl =
+    process.env.ALLOW_PRIVATE_NETWORK_ACCESS === "true"
+      ? null
+      : await getSsrfProxyUrl();
 
   return new Promise<void>((resolve, reject) => {
     const args = [
@@ -27,9 +36,22 @@ export default async function handleMonolith(
       stdio: ["pipe", "pipe", "inherit"],
       signal,
       killSignal: "SIGKILL",
+      env: proxyUrl
+        ? {
+            ...process.env,
+            HTTP_PROXY: proxyUrl,
+            HTTPS_PROXY: proxyUrl,
+            ALL_PROXY: proxyUrl,
+            http_proxy: proxyUrl,
+            https_proxy: proxyUrl,
+            all_proxy: proxyUrl,
+            NO_PROXY: "",
+            no_proxy: "",
+          }
+        : process.env,
     });
 
-    child.stdin.write(htmlFromPage);
+    child.stdin.write(pageContent);
     child.stdin.end();
 
     const chunks: Buffer[] = [];

@@ -1,8 +1,10 @@
 import { prisma } from "@linkwarden/prisma";
 import sendInvitationRequest from "@/lib/api/sendInvitationRequest";
 import sendVerificationRequest from "@/lib/api/sendVerificationRequest";
-import updateSeats from "@/lib/api/stripe/updateSeats";
-import verifySubscription from "@/lib/api/stripe/verifySubscription";
+import updateSeats from "@/lib/api/billing/updateSeats";
+import verifySubscription from "@/lib/api/billing/verifySubscription";
+import { getAppleClientId, getAppleClientSecret } from "@/lib/api/apple";
+import { ssoEmailVerified } from "@/lib/api/ssoEmailVerified";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { User } from "@linkwarden/prisma/client";
 import bcrypt from "bcrypt";
@@ -80,6 +82,8 @@ const adapter = PrismaAdapter(prisma);
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
 const providers: Provider[] = [];
+const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith("https://");
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
 
 if (process.env.NEXT_PUBLIC_CREDENTIALS_ENABLED !== "false") {
   // undefined is for backwards compatibility
@@ -245,8 +249,10 @@ if (process.env.NEXT_PUBLIC_FORTYTWO_ENABLED === "true") {
 if (process.env.NEXT_PUBLIC_APPLE_ENABLED === "true") {
   providers.push(
     AppleProvider({
-      clientId: process.env.APPLE_CLIENT_ID!,
-      clientSecret: process.env.APPLE_CLIENT_SECRET!,
+      clientId: getAppleClientId(),
+      get clientSecret() {
+        return getAppleClientSecret();
+      },
       httpOptions: {
         timeout: 10000,
       },
@@ -256,7 +262,6 @@ if (process.env.NEXT_PUBLIC_APPLE_ENABLED === "true") {
           name: profile.name,
           email: profile.email,
           image: null,
-          username: profile.sub,
         };
       },
     })
@@ -1310,6 +1315,40 @@ if (process.env.NEXT_PUBLIC_ZOOM_ENABLED_ENABLED === "true") {
   };
 }
 
+// Generic OIDC
+if (process.env.NEXT_PUBLIC_OIDC_ENABLED === "true") {
+  providers.push({
+    id: "oidc",
+    name: process.env.OIDC_CUSTOM_NAME ?? "OIDC",
+    type: "oauth",
+    clientId: process.env.OIDC_CLIENT_ID!,
+    clientSecret: process.env.OIDC_CLIENT_SECRET!,
+    wellKnown: process.env.OIDC_WELLKNOWN_URL!,
+    authorization: {
+      params: { scope: process.env.OIDC_SCOPES ?? "openid email profile" },
+    },
+    idToken: true,
+    checks: ["pkce", "state"],
+    httpOptions: {
+      timeout: 10000,
+    },
+    profile(profile) {
+      return {
+        id: profile.sub,
+        name: profile.name,
+        email: profile.email,
+        username: profile.preferred_username,
+      };
+    },
+  });
+
+  const _linkAccount = adapter.linkAccount;
+  adapter.linkAccount = (account) => {
+    const { "not-before-policy": _, refresh_expires_in, ...data } = account;
+    return _linkAccount ? _linkAccount(data) : undefined;
+  };
+}
+
 export default async function auth(req: NextApiRequest, res: NextApiResponse) {
   return await NextAuth(req, res, {
     adapter: adapter as Adapter,
@@ -1322,8 +1361,20 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
       signIn: "/login",
       verifyRequest: "/confirmation",
     },
+    cookies: {
+      pkceCodeVerifier: {
+        name: `${cookiePrefix}next-auth.pkce.code_verifier`,
+        options: {
+          httpOnly: true,
+          sameSite: useSecureCookies ? "none" : "lax",
+          path: "/",
+          secure: useSecureCookies,
+          maxAge: 60 * 15,
+        },
+      },
+    },
     callbacks: {
-      async signIn({ user, account, profile, email, credentials }) {
+      async signIn({ user, account, email, profile }) {
         if (!(user as User).emailVerified && !email?.verificationRequest) {
           const parentSubscriptionId = (user as User).parentSubscriptionId;
 
@@ -1351,6 +1402,8 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             if (
               STRIPE_SECRET_KEY &&
               parentSubscription?.quantity &&
+              parentSubscription.provider === "STRIPE" &&
+              parentSubscription.stripeSubscriptionId &&
               verifiedChildUsersCount + 2 > // add current user and the admin
                 parentSubscription.quantity
             ) {
@@ -1387,6 +1440,10 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             });
 
             if (findUser && findUser.accounts.length === 0) {
+              if (!ssoEmailVerified(profile)) {
+                return false;
+              }
+
               await prisma.account.create({
                 data: {
                   userId: findUser.id,

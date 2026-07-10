@@ -21,6 +21,7 @@ import { LinkIncludingShortenedCollectionAndTags } from "@linkwarden/types/globa
 import LinkListing from "@/components/LinkListing";
 import { useColorScheme } from "nativewind";
 import { useRouter } from "expo-router";
+import { hasOptimisticLink } from "@/lib/utils";
 
 // Don't use prisma client's DashboardSectionType, it'll crash in production (React Native)
 type DashboardSectionType =
@@ -150,7 +151,10 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
 
                 if (
                   !dashboardData.isRefetching &&
-                  links.some((e) => e.id && !e.preview)
+                  !hasOptimisticLink(links) &&
+                  links.some(
+                    (e) => typeof e.id === "number" && e.id > 0 && !e.preview
+                  )
                 ) {
                   dashboardData.refetch();
                 }
@@ -233,7 +237,10 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
 
                 if (
                   !dashboardData.isRefetching &&
-                  links.some((e) => e.id && !e.preview)
+                  !hasOptimisticLink(links) &&
+                  links.some(
+                    (e) => typeof e.id === "number" && e.id > 0 && !e.preview
+                  )
                 ) {
                   dashboardData.refetch();
                 }
@@ -315,7 +322,10 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
 
                 if (
                   !dashboardData.isRefetching &&
-                  links.some((e) => e.id && !e.preview)
+                  !hasOptimisticLink(links) &&
+                  links.some(
+                    (e) => typeof e.id === "number" && e.id > 0 && !e.preview
+                  )
                 ) {
                   dashboardData.refetch();
                 }

@@ -7,7 +7,6 @@ import { FormEvent, useState } from "react";
 import { toast } from "react-hot-toast";
 import getServerSideProps from "@/lib/client/getServerSideProps";
 import { useTranslation } from "next-i18next";
-import { Separator } from "@/components/ui/separator";
 
 interface FormData {
   password: string;
@@ -64,26 +63,19 @@ export default function ResetPassword() {
   }
 
   return (
-    <CenteredForm>
+    <CenteredForm
+      header={requestSent ? t("password_updated") : t("reset_password")}
+    >
       <form onSubmit={submit}>
-        <div className="p-4 mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-base-200 rounded-xl shadow-md border border-neutral-content">
-          <p className="text-3xl text-center font-extralight">
-            {requestSent ? t("password_updated") : t("reset_password")}
-          </p>
-
-          <Separator />
-
+        <div className="mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full">
           {!requestSent ? (
             <>
               <p>{t("enter_email_for_new_password")}</p>
               <div>
-                <p className="text-sm w-fit font-semibold mb-1">
-                  {t("new_password")}
-                </p>
                 <TextInput
                   autoFocus
                   type="password"
-                  placeholder="••••••••••••••"
+                  placeholder={t("new_password")}
                   value={form.password}
                   className="bg-base-100"
                   onChange={(e) =>
@@ -94,7 +86,6 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 variant="accent"
-                className="mt-2"
                 size="full"
                 disabled={submitLoader}
               >

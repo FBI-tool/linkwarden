@@ -7,9 +7,11 @@ import {
   View,
 } from "react-native";
 import React, { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardData } from "@linkwarden/router/dashboardData";
 import { isAtLeastInstanceVersion, useConfig } from "@linkwarden/router/config";
 import useAuthStore from "@/store/auth";
+import { showWhatsNewIfNeeded } from "@/lib/whatsNew";
 import { DashboardSection as DashboardSectionType } from "@linkwarden/prisma/client";
 import { useUser } from "@linkwarden/router/user";
 import { useCollections } from "@linkwarden/router/collections";
@@ -23,6 +25,11 @@ const DASHBOARD_TAG_COUNT_VERSION = "2.14.0";
 
 export default function DashboardScreen() {
   const { auth } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (auth.status === "authenticated") showWhatsNewIfNeeded();
+  }, [auth.status]);
   const {
     data: {
       links = [],
@@ -89,6 +96,10 @@ export default function DashboardScreen() {
         dashboardData.refetch(),
         userData.refetch(),
         collectionsData.refetch(),
+        queryClient.refetchQueries({
+          queryKey: ["highlights"],
+          type: "all",
+        }),
         ...(shouldUseLegacyTagsCount ? [legacyTags.refetch()] : []),
       ]);
     } finally {
@@ -121,7 +132,7 @@ export default function DashboardScreen() {
       contentInsetAdjustmentBehavior="automatic"
     >
       {orderedSections.map((sectionData, i) => {
-        if (!collections || !collections[0]) return null;
+        if (!collections) return null;
 
         const collection = collections.find(
           (c) => c.id === sectionData.collectionId
@@ -151,17 +162,9 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 49,
-      flexDirection: "column",
-      gap: 15,
-      paddingVertical: 20,
-    },
-    default: {
-      flexDirection: "column",
-      gap: 15,
-      paddingVertical: 20,
-    },
-  }),
+  container: {
+    flexDirection: "column",
+    gap: 15,
+    paddingVertical: 20,
+  },
 });

@@ -8,8 +8,14 @@ import { Button } from "@/components/ui/button";
 import getServerSideProps from "@/lib/client/getServerSideProps";
 import { Trans, useTranslation } from "next-i18next";
 import { useUser } from "@linkwarden/router/user";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import DeleteOwnAccountModal from "@/components/ModalContent/DeleteOwnAccountModal";
 
 const TRIAL_PERIOD_DAYS =
   Number(process.env.NEXT_PUBLIC_TRIAL_PERIOD_DAYS) || 14;
@@ -18,6 +24,7 @@ const REQUIRE_CC = process.env.NEXT_PUBLIC_REQUIRE_CC === "true";
 export default function Subscribe() {
   const { t } = useTranslation();
   const [submitLoader, setSubmitLoader] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const session = useSession();
 
   const [plan, setPlan] = useState<Plan>(1);
@@ -62,25 +69,21 @@ export default function Subscribe() {
 
   return (
     <CenteredForm
+      header={t("subscribe_title")}
+      className="bg-gradient-to-b from-[#289DF220] to-transparent"
       text={
-        REQUIRE_CC
+        REQUIRE_CC && user?.subscription?.provider === undefined
           ? `Start with a ${
               process.env.NEXT_PUBLIC_TRIAL_PERIOD_DAYS || 14
             }-day free trial, cancel anytime!`
-          : daysLeft <= 0
-            ? "Your free trial has ended, subscribe to continue."
-            : `You have ${daysLeft} ${
+          : !REQUIRE_CC && daysLeft > 0
+            ? `You have ${daysLeft} ${
                 daysLeft === 1 ? "day" : "days"
               } left in your free trial.`
+            : "Your free trial has ended, subscribe to continue."
       }
     >
-      <div className="p-4 mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full bg-base-200 rounded-xl shadow-md border border-neutral-content">
-        <p className="sm:text-3xl text-xl text-center font-extralight">
-          {t("subscribe_title")}
-        </p>
-
-        <Separator />
-
+      <div className="mx-auto flex flex-col gap-3 justify-between max-w-[30rem] min-w-80 w-full">
         <div>
           <p>
             <Trans
@@ -96,7 +99,7 @@ export default function Subscribe() {
           </p>
         </div>
 
-        <div className="flex gap-3 border border-solid border-neutral-content w-4/5 mx-auto p-1 rounded-xl relative">
+        <div className="flex gap-3 border border-solid border-neutral-content w-full mx-auto p-1 rounded-xl relative">
           <button
             onClick={() => setPlan(Plan.monthly)}
             className={`w-full duration-100 text-sm rounded-lg p-1 ${
@@ -136,8 +139,8 @@ export default function Subscribe() {
           </p>
 
           {REQUIRE_CC || daysLeft > 0 ? (
-            <fieldset className="w-full max-h-fit flex-col flex gap-2 px-4 pb-4 pt-2 rounded-md border border-neutral-content">
-              <legend className="w-fit font-extralight px-2 border border-neutral-content rounded-md text-xl">
+            <fieldset className="w-full max-h-fit flex-col flex gap-2 px-4 pb-4 pt-2 rounded-xl border border-neutral-content">
+              <legend className="w-fit font-extralight px-2 border border-neutral-content rounded-xl text-xl">
                 {t("total")}
               </legend>
 
@@ -176,12 +179,27 @@ export default function Subscribe() {
           </Button>
 
           {REQUIRE_CC || daysLeft <= 0 ? (
-            <div
-              onClick={() => signOut()}
-              className="w-fit mx-auto cursor-pointer text-neutral font-semibold "
-            >
-              {t("sign_out")}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-fit mx-auto">
+                  {t("manage_your_account")}
+                  <i className="bi-chevron-down text-sm" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <i className="bi-box-arrow-right" />
+                  {t("sign_out")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-500 focus:text-red-500"
+                  onClick={() => setDeleteModalOpen(true)}
+                >
+                  <i className="bi-trash" />
+                  {t("delete_account")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button
               className=""
@@ -194,6 +212,10 @@ export default function Subscribe() {
           )}
         </div>
       </div>
+
+      {deleteModalOpen && (
+        <DeleteOwnAccountModal onClose={() => setDeleteModalOpen(false)} />
+      )}
     </CenteredForm>
   );
 }

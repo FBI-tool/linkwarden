@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@linkwarden/prisma";
 import { User } from "@linkwarden/prisma/client";
-import verifySubscription from "./stripe/verifySubscription";
+import verifySubscription from "./billing/verifySubscription";
 import verifyToken from "./verifyToken";
 
 type Props = {

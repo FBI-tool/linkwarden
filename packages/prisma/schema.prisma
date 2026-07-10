@@ -27,6 +27,7 @@ model Account {
 
 model User {
   id                      Int                   @id @default(autoincrement())
+  uuid                    String                @unique @default(uuid()) @db.Uuid
   name                    String?
   username                String?               @unique
   email                   String?               @unique
@@ -218,17 +219,31 @@ model Tag {
 }
 
 model Subscription {
-  id                   Int      @id @default(autoincrement())
-  active               Boolean
-  stripeSubscriptionId String   @unique
-  currentPeriodStart   DateTime
-  currentPeriodEnd     DateTime
-  quantity             Int      @default(1)
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId               Int      @unique
-  childUsers           User[]   @relation("ChildUsers")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now()) @updatedAt
+  id                     Int      @id @default(autoincrement())
+  active                 Boolean
+  provider               SubscriptionProvider
+  currentPeriodStart     DateTime
+  currentPeriodEnd       DateTime
+  quantity               Int      @default(1)
+  
+  storeOriginalTransactionId String?              @unique
+  storeProductId             String?
+  googlePurchaseToken        String?              @unique // Google Play purchase token — the key for querying/acknowledging the subscription
+  storeMetadata              Json?
+
+  stripeSubscriptionId   String?  @unique
+  
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                 Int      @unique
+  childUsers             User[]   @relation("ChildUsers")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @default(now()) @updatedAt
+}
+
+enum SubscriptionProvider {
+  STRIPE
+  APPLE
+  GOOGLE
 }
 
 model AccessToken {
@@ -294,11 +309,11 @@ enum DashboardSectionType {
 }
 
 model AppMigration {
-  id         Int                 @id @default(autoincrement())
-  name       String              @unique
+  id         Int                @id @default(autoincrement())
+  name       String             @unique
   status     AppMigrationStatus
   finishedAt DateTime?
-  createdAt  DateTime            @default(now())
+  createdAt  DateTime           @default(now())
 }
 
 enum AppMigrationStatus {

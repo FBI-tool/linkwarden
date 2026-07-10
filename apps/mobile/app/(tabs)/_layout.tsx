@@ -1,79 +1,116 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Platform } from "react-native";
-import TabBarBackground from "@/components/ui/TabBarBackground";
+import { useRouter } from "expo-router";
+import {
+  NativeTabs,
+  Icon,
+  Label,
+  VectorIcon,
+} from "expo-router/unstable-native-tabs";
+import React, { useEffect } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
 import { useColorScheme } from "nativewind";
 import { rawTheme, ThemeName } from "@/lib/colors";
-import { Folder, Hash, House, Link, Settings } from "lucide-react-native";
+import useAuthStore from "@/store/auth";
+import { useUser } from "@linkwarden/router/user";
+import { useConfig } from "@linkwarden/router/config";
+import { shouldRouteToSubscribe } from "@/lib/subscription";
+import { queryClient } from "@/lib/queryClient";
+
+const isCacheEmpty = (instance: string) =>
+  queryClient.getQueryData(["user"]) == null &&
+  queryClient.getQueryData(["config", instance]) == null;
+
+let recoveringSession: string | null = null;
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
+  const router = useRouter();
+  const { auth } = useAuthStore();
+  const {
+    data: user,
+    isError: isUserError,
+    isLoading: isUserLoading,
+  } = useUser(auth);
+  const config = useConfig(auth);
+  const routeToSubscribe = shouldRouteToSubscribe(user, config.data);
+  const hasEmptyCache = auth.instance ? isCacheEmpty(auth.instance) : false;
+  const shouldRecover =
+    auth.status === "authenticated" &&
+    isUserError &&
+    config.isError &&
+    hasEmptyCache;
+
+  useEffect(() => {
+    if (routeToSubscribe) router.replace("/subscribe");
+  }, [routeToSubscribe, router]);
+
+  useEffect(() => {
+    if (
+      !shouldRecover ||
+      !auth.session ||
+      recoveringSession === auth.session
+    )
+      return;
+
+    recoveringSession = auth.session;
+    router.replace({
+      pathname: "/",
+      params: {
+        serverRecovery: "true",
+      },
+    });
+  }, [auth.session, router, shouldRecover]);
+
+  if (
+    auth.status === "authenticated" &&
+    (isUserLoading || config.isLoading || routeToSubscribe || shouldRecover)
+  ) {
+    return (
+      <View className="flex-1 items-center justify-center bg-base-100">
+        <ActivityIndicator
+          size="large"
+          color={rawTheme[colorScheme as ThemeName]["base-content"]}
+        />
+      </View>
+    );
+  }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarBackground: TabBarBackground,
-        tabBarActiveTintColor: rawTheme[colorScheme as ThemeName].primary,
-        tabBarInactiveTintColor: rawTheme[colorScheme as ThemeName].neutral,
-        tabBarStyle: Platform.select({
-          ios: {
-            position: "absolute",
-            borderTopWidth: 0,
-            elevation: 0,
-            backgroundColor: rawTheme[colorScheme as ThemeName]["base-200"],
-            paddingLeft: 5,
-            paddingRight: 5,
-          },
-          default: {
-            borderTopWidth: 0,
-            backgroundColor: rawTheme[colorScheme as ThemeName]["base-200"],
-            elevation: 0,
-            paddingLeft: 5,
-            paddingRight: 5,
-          },
-        }),
-      }}
+    <NativeTabs
+      labelVisibilityMode="labeled"
+      tintColor={rawTheme[colorScheme as ThemeName].primary}
+      backgroundColor={
+        Platform.OS === "android"
+          ? rawTheme[colorScheme as ThemeName]["base-200"]
+          : undefined
+      }
+      indicatorColor={rawTheme[colorScheme as ThemeName]["neutral-content"]}
+      minimizeBehavior="onScrollDown"
     >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: "Dashboard",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <House size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="links"
-        options={{
-          title: "Links",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <Link size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="collections"
-        options={{
-          title: "Collections",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <Folder size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="tags"
-        options={{
-          title: "Tags",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <Hash size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="dashboard">
+        <Label>Dashboard</Label>
+        <Icon src={<VectorIcon family={Feather} name="home" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="links">
+        <Label>Links</Label>
+        <Icon src={<VectorIcon family={Feather} name="link" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="collections">
+        <Label>Collections</Label>
+        <Icon src={<VectorIcon family={Feather} name="folder" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="tags">
+        <Label>Tags</Label>
+        <Icon src={<VectorIcon family={Feather} name="hash" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="settings">
+        <Label>Settings</Label>
+        <Icon src={<VectorIcon family={Feather} name="settings" />} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

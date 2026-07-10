@@ -209,6 +209,7 @@ export interface MobileData {
   theme: "light" | "dark" | "system";
   preferredBrowser: "app" | "system";
   preferredCollection: CollectionIncludingMembersAndLinkCount | null;
+  offlineEnabled: boolean;
 }
 
 export interface WorkerStats {
@@ -224,7 +225,10 @@ export interface WorkerStats {
 }
 
 export type GetUserByIdResponse = Omit<User, "password"> &
-  Partial<{ subscription: Pick<Subscription, "active" | "quantity"> }> & {
+  Partial<{
+    subscription: Pick<Subscription, "active" | "quantity"> &
+      Partial<Pick<Subscription, "provider">>;
+  }> & {
     parentSubscription: {
       active: boolean | undefined;
       user: {
@@ -233,5 +237,7 @@ export type GetUserByIdResponse = Omit<User, "password"> &
     };
   } & {
     dashboardSections: DashboardSection[];
+    hasPassword: boolean;
+    hasOAuthAccount: boolean;
     hasUnIndexedLinks: boolean;
   };

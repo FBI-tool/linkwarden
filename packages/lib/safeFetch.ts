@@ -34,7 +34,7 @@ function createSafeLookup() {
           ? 6
           : normalizedOptions.family;
 
-    void resolveHostnameForServerSideFetch(hostname, defaultHostnameLookup)
+    resolveHostnameForServerSideFetch(hostname, defaultHostnameLookup)
       .then((resolved) => {
         if (normalizedOptions.all) {
           callback(null, resolved);
@@ -104,6 +104,10 @@ export async function safeFetch(
     const validatedUrl = await assertUrlIsSafeForServerSideFetch(currentUrl);
     const response = await fetch(validatedUrl.toString(), {
       ...fetchOptions,
+      headers: {
+        "User-Agent": "Linkwarden (Server-Side Fetch)",
+        ...fetchOptions.headers,
+      },
       agent: createAgent(validatedUrl),
       redirect: "manual",
     });

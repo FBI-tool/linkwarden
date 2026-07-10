@@ -1,5 +1,9 @@
 import { useLinks } from "@linkwarden/router/links";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, Platform, TouchableOpacity } from "react-native";
+import { Plus } from "lucide-react-native";
+import { SheetManager } from "react-native-actions-sheet";
+import { useColorScheme } from "nativewind";
+import { rawTheme, ThemeName } from "@/lib/colors";
 import useAuthStore from "@/store/auth";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect } from "react";
@@ -25,6 +29,7 @@ export default function LinksScreen() {
   const collections = useCollections(auth);
 
   const navigation = useNavigation();
+  const { colorScheme } = useColorScheme();
 
   const isIOS26Plus =
     Platform.OS === "ios" && parseInt(Platform.Version, 10) >= 26;
@@ -34,22 +39,37 @@ export default function LinksScreen() {
       (e) => e.id === Number(id)
     )[0];
 
-    if (activeCollection?.name)
-      navigation?.setOptions?.({
-        headerTitle: activeCollection?.name,
-        headerSearchBarOptions: {
-          placeholder: `Search ${activeCollection.name}`,
-          ...(isIOS26Plus && {
-            allowToolbarIntegration: false,
-            placement: "integratedButton",
-          }),
-        },
-      });
-  }, [navigation]);
+    navigation?.setOptions?.({
+      ...(activeCollection?.name
+        ? {
+            headerTitle: activeCollection.name,
+            headerSearchBarOptions: {
+              placeholder: `Search ${activeCollection.name}`,
+              ...(isIOS26Plus && {
+                allowToolbarIntegration: false,
+                placement: "integratedButton",
+              }),
+            },
+          }
+        : {}),
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() =>
+            SheetManager.show("add-link-sheet", {
+              payload: {
+                collection: { id: Number(id), name: activeCollection?.name },
+              },
+            })
+          }
+        >
+          <Plus size={21} color={rawTheme[colorScheme as ThemeName].primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, collections.data, id, colorScheme]);
 
   return (
     <View
-      style={styles.container}
       className="h-full bg-base-100"
       collapsable={false}
       collapsableChildren={false}
@@ -58,12 +78,3 @@ export default function LinksScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: Platform.select({
-    ios: {
-      paddingBottom: 83,
-    },
-    default: {},
-  }),
-});

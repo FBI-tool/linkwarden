@@ -28,6 +28,7 @@ async function main() {
           create: {
             stripeSubscriptionId: "sub_4323",
             active: true,
+            provider: "STRIPE",
             currentPeriodStart,
             currentPeriodEnd,
           },
@@ -64,6 +65,7 @@ async function main() {
           create: {
             stripeSubscriptionId: "sub_5435",
             active: true,
+            provider: "STRIPE",
             currentPeriodStart,
             currentPeriodEnd,
           },
@@ -100,6 +102,7 @@ async function main() {
           create: {
             stripeSubscriptionId: "sub_6435",
             active: true,
+            provider: "STRIPE",
             currentPeriodStart,
             currentPeriodEnd,
           },
@@ -136,6 +139,7 @@ async function main() {
           create: {
             stripeSubscriptionId: "sub_7868",
             active: true,
+            provider: "STRIPE",
             currentPeriodStart,
             currentPeriodEnd,
           },
@@ -172,6 +176,7 @@ async function main() {
           create: {
             stripeSubscriptionId: "sub_5653",
             active: true,
+            provider: "STRIPE",
             currentPeriodStart,
             currentPeriodEnd,
           },

@@ -5,8 +5,8 @@ import { colorScheme } from "nativewind";
 
 type DataStore = {
   data: MobileData;
-  updateData: (newData: Partial<MobileData>) => void;
-  setData: () => void;
+  updateData: (newData: Partial<MobileData>) => Promise<void>;
+  setData: () => Promise<void>;
 };
 
 const useDataStore = create<DataStore>((set, get) => ({
@@ -18,14 +18,14 @@ const useDataStore = create<DataStore>((set, get) => ({
     theme: "system",
     preferredBrowser: "app",
     preferredCollection: null,
+    offlineEnabled: false,
   },
   setData: async () => {
     const dataString = JSON.parse((await AsyncStorage.getItem("data")) || "{}");
 
     colorScheme.set(dataString.theme || "system");
 
-    if (dataString)
-      set((state) => ({ data: { ...state.data, ...dataString } }));
+    set((state) => ({ data: { ...state.data, ...dataString } }));
   },
   updateData: async (patch) => {
     const merged = { ...get().data, ...patch };

@@ -10,6 +10,9 @@ export type Config = {
   USER_CONTENT_DOMAIN: string | null;
   AI_ENABLED: boolean | null;
   INSTANCE_VERSION: string | null;
+  STRIPE_ENABLED: boolean | null;
+  TRIAL_PERIOD_DAYS: number | null;
+  REQUIRE_CC: boolean | null;
 };
 
 const normalizeVersion = (version?: string | null) => {
@@ -49,8 +52,12 @@ const isAtLeastInstanceVersion = (
 };
 
 const useConfig = (auth?: MobileAuth) => {
+  const isMobile = auth !== undefined;
+
   return useQuery({
     queryKey: ["config", auth?.instance ?? "web"],
+    enabled:
+      !isMobile || (auth.status === "authenticated" && Boolean(auth.instance)),
     queryFn: async () => {
       const response = await fetch(
         (auth?.instance ? auth.instance : "") + "/api/v1/config",

@@ -2,16 +2,22 @@ import { prisma } from "@linkwarden/prisma";
 import bcrypt from "bcrypt";
 import { removeFolder, removeFile } from "@linkwarden/filesystem";
 import { DeleteUserBody } from "@linkwarden/types/global";
-import updateSeats from "@/lib/api/stripe/updateSeats";
+import updateSeats from "@/lib/api/billing/updateSeats";
 import { meiliClient } from "@linkwarden/lib/meilisearchClient";
-import stripeSDK from "@/lib/api/stripe/stripeSDK";
+import stripeSDK from "@/lib/api/billing/stripeSDK";
+import { isStoreBillingConfigured } from "@/lib/api/billing/syncStoreSubscription";
+import {
+  cancelGoogleSubscription,
+  isGooglePlayConfigured,
+} from "@/lib/api/billing/googlePlay";
 import transporter from "@linkwarden/lib/transporter";
 
 export default async function deleteUserById(
   userId: number,
   body: DeleteUserBody,
   isServerAdmin: boolean,
-  queryId: number
+  queryId: number,
+  bypassPassword: boolean = false
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -38,24 +44,28 @@ export default async function deleteUserById(
 
   if (!isServerAdmin) {
     if (queryId === userId) {
-      if (user.password) {
-        const isPasswordValid = bcrypt.compareSync(
-          body.password,
-          user.password
-        );
+      // Non-subscribers (only granted when billing is enabled) may delete their
+      // own account without re-entering their password.
+      if (!bypassPassword) {
+        if (user.password) {
+          const isPasswordValid = bcrypt.compareSync(
+            body.password,
+            user.password
+          );
 
-        if (!isPasswordValid && !isServerAdmin) {
+          if (!isPasswordValid) {
+            return {
+              response: "Invalid credentials.",
+              status: 401,
+            };
+          }
+        } else {
           return {
-            response: "Invalid credentials.",
+            response:
+              "User has no password. Please create one from the password settings page.",
             status: 401,
           };
         }
-      } else {
-        return {
-          response:
-            "User has no password. Please reset your password from the forgot password page.",
-          status: 401,
-        };
       }
     } else {
       if (user.parentSubscriptionId) {
@@ -90,7 +100,11 @@ export default async function deleteUserById(
           },
         });
 
-        if (removeUser.emailVerified)
+        if (
+          removeUser.emailVerified &&
+          user.subscriptions.provider === "STRIPE" &&
+          user.subscriptions.stripeSubscriptionId
+        )
           await updateSeats(
             user.subscriptions.stripeSubscriptionId,
             user.subscriptions.quantity - 1
@@ -132,15 +146,17 @@ export default async function deleteUserById(
 
         await removeFile({ filePath: `uploads/avatar/${queryId}.jpg` });
 
-        if (process.env.STRIPE_SECRET_KEY) {
-          const stripe = stripeSDK();
+        const billingEnabled =
+          Boolean(process.env.STRIPE_SECRET_KEY) || isStoreBillingConfigured();
 
-          // Send an email about cancellation reason if provided
-          if (
-            body.cancellation_details?.comment ||
+        // Send an email about cancellation reason if provided
+        if (
+          billingEnabled &&
+          (body.cancellation_details?.comment ||
             body.cancellation_details?.feedback ||
-            user.acceptPromotionalEmails
-          )
+            user.acceptPromotionalEmails)
+        ) {
+          try {
             await transporter.sendMail({
               from: process.env.EMAIL_FROM,
               to: "hello@linkwarden.app",
@@ -151,6 +167,16 @@ export default async function deleteUserById(
                 body.cancellation_details?.comment || "N/A"
               }\nPromotional Emails: ${String(user.acceptPromotionalEmails)}`,
             });
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        if (
+          process.env.STRIPE_SECRET_KEY &&
+          user.subscriptions?.provider === "STRIPE"
+        ) {
+          const stripe = stripeSDK();
 
           try {
             if (user.subscriptions?.id && queryId !== userId) {
@@ -159,7 +185,7 @@ export default async function deleteUserById(
                 select: { stripeSubscriptionId: true },
               });
 
-              if (subscription) {
+              if (subscription?.stripeSubscriptionId) {
                 await stripe.subscriptions.cancel(
                   subscription.stripeSubscriptionId,
                   {
@@ -170,7 +196,11 @@ export default async function deleteUserById(
                   }
                 );
               }
-            } else if (user.subscriptions?.id && queryId === userId) {
+            } else if (
+              user.subscriptions?.id &&
+              user.subscriptions.stripeSubscriptionId &&
+              queryId === userId
+            ) {
               await stripe.subscriptions.cancel(
                 user.subscriptions.stripeSubscriptionId,
                 {
@@ -182,6 +212,7 @@ export default async function deleteUserById(
               );
             } else if (
               user.parentSubscription?.id &&
+              user.parentSubscription.stripeSubscriptionId &&
               user &&
               user.emailVerified
             ) {
@@ -189,6 +220,31 @@ export default async function deleteUserById(
                 user.parentSubscription.stripeSubscriptionId,
                 user.parentSubscription.quantity - 1
               );
+            }
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        // A Play Store subscription can be cancelled server-side (auto-renew is
+        // turned off; it stays paid-up until the period ends). App Store
+        // subscriptions have no cancellation API — the UI tells those users to
+        // cancel through Apple instead.
+        if (isGooglePlayConfigured()) {
+          try {
+            const subscription =
+              queryId === userId
+                ? user.subscriptions
+                : await prisma.subscription.findFirst({
+                    where: { userId: queryId },
+                    select: { provider: true, googlePurchaseToken: true },
+                  });
+
+            if (
+              subscription?.provider === "GOOGLE" &&
+              subscription.googlePurchaseToken
+            ) {
+              await cancelGoogleSubscription(subscription.googlePurchaseToken);
             }
           } catch (err) {
             console.log(err);

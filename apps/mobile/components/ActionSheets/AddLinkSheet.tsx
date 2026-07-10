@@ -1,6 +1,10 @@
 import { Alert, Text, View } from "react-native";
 import { useRef, useState } from "react";
-import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
+import ActionSheet, {
+  ActionSheetRef,
+  SheetProps,
+} from "react-native-actions-sheet";
+import { Folder, Tag } from "lucide-react-native";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useAddLink } from "@linkwarden/router/links";
@@ -8,15 +12,25 @@ import useAuthStore from "@/store/auth";
 import { rawTheme, ThemeName } from "@/lib/colors";
 import { useColorScheme } from "nativewind";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import SheetHeader from "./SheetHeader";
 
-export default function AddLinkSheet() {
+export default function AddLinkSheet(props: SheetProps<"add-link-sheet">) {
   const actionSheetRef = useRef<ActionSheetRef>(null);
   const { auth } = useAuthStore();
   const addLink = useAddLink({ auth, Alert });
   const [link, setLink] = useState("");
   const { colorScheme } = useColorScheme();
+  const theme = rawTheme[colorScheme as ThemeName];
+
+  const collection = props.payload?.collection;
+  const tag = props.payload?.tag;
 
   const insets = useSafeAreaInsets();
+
+  const closeSheet = () => {
+    actionSheetRef.current?.hide();
+    setLink("");
+  };
 
   return (
     <ActionSheet
@@ -29,42 +43,71 @@ export default function AddLinkSheet() {
         backgroundColor: rawTheme[colorScheme as ThemeName]["base-200"],
       }}
       safeAreaInsets={insets}
+      onClose={() => {
+        setLink("");
+      }}
     >
-      <View className="px-8 py-5">
-        <Text className="font-semibold text-lg mx-auto mb-5 text-base-content">
-          New Link
-        </Text>
+      <SheetHeader title="New Link" onClose={closeSheet} />
 
+      <View className="px-8 pb-5">
         <Input
           placeholder="e.g. https://example.com"
           className="mb-4 bg-base-100"
+          autoCapitalize="none"
           value={link}
           onChangeText={setLink}
         />
 
+        {collection?.name || tag?.name ? (
+          <View className="mb-4 flex-row items-center gap-2">
+            {collection?.name ? (
+              <View className="flex-row items-center gap-1.5 rounded-full bg-base-100 px-3 py-1.5">
+                <Folder size={14} color={theme.primary} />
+                <Text className="text-sm text-base-content">
+                  {collection.name}
+                </Text>
+              </View>
+            ) : null}
+            {tag?.name ? (
+              <View className="flex-row items-center gap-1.5 rounded-full bg-base-100 px-3 py-1.5">
+                <Tag size={14} color={theme.primary} />
+                <Text className="text-sm text-base-content">{tag.name}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <Button
           onPress={() => {
-            addLink.mutate({ url: link });
+            addLink.mutate({
+              url: link,
+              ...(collection?.id != null || collection?.name
+                ? {
+                    collection: {
+                      ...(collection.id != null ? { id: collection.id } : {}),
+                      ...(collection.name ? { name: collection.name } : {}),
+                    },
+                  }
+                : {}),
+              ...(tag?.name
+                ? {
+                    tags: [
+                      {
+                        name: tag.name,
+                        ...(tag.id != null ? { id: tag.id } : {}),
+                      },
+                    ],
+                  }
+                : {}),
+            });
 
             actionSheetRef.current?.hide();
             setLink("");
           }}
           isLoading={addLink.isPending}
           variant="accent"
-          className="mb-2"
         >
           <Text className="text-white">Save to Linkwarden</Text>
-        </Button>
-
-        <Button
-          onPress={() => {
-            actionSheetRef.current?.hide();
-            setLink("");
-          }}
-          variant="outline"
-          className="mb-2"
-        >
-          <Text className="text-base-content">Cancel</Text>
         </Button>
       </View>
     </ActionSheet>

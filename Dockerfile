@@ -21,7 +21,6 @@ RUN corepack enable
 
 # Copy only structure first for optimized caching
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/filesystem/package.json ./packages/filesystem/

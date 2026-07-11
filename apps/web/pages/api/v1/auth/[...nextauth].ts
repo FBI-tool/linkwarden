@@ -1440,7 +1440,7 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
             });
 
             if (findUser && findUser.accounts.length === 0) {
-              if (!ssoEmailVerified(profile)) {
+              if (account.type !== "email" && !ssoEmailVerified(profile)) {
                 return false;
               }
 
